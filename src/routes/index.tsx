@@ -150,10 +150,12 @@ function Index() {
       <header className="px-5 pt-8 pb-4 max-w-2xl mx-auto">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
               Il tuo tempo
             </p>
-            <h1 className="font-display text-4xl italic leading-none mt-1">Calendario</h1>
+            <h1 className="font-display text-2xl font-semibold uppercase tracking-wide leading-none mt-1.5">
+              Calendario
+            </h1>
           </div>
           <button
             onClick={() => setShowCats(true)}
@@ -183,9 +185,9 @@ function Index() {
                   : `${monthStatus.nonFull}/${monthStatus.total}`}
               </span>
             )}
-            <h2 className="font-display text-2xl italic">
-              {MONTH_NAMES[month]}{" "}
-              <span className="text-muted-foreground not-italic text-lg font-sans">{year}</span>
+            <h2 className="font-display text-xl font-semibold uppercase tracking-wide">
+              {MONTH_NAMES[month].toUpperCase()}{" "}
+              <span className="text-muted-foreground text-base font-sans">{year}</span>
             </h2>
           </div>
           <button
@@ -203,7 +205,7 @@ function Index() {
           onTouchEnd={onTouchEnd}
           className="rounded-2xl bg-card border border-border p-2 sm:p-3 shadow-sm"
         >
-          <div className="grid grid-cols-7 mb-1">
+          <div className="grid grid-cols-7 mb-1.5">
             {DOW_SHORT.map((d, i) => (
               <div
                 key={i}
@@ -213,7 +215,7 @@ function Index() {
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-1.5">
             {days.map((d) => (
               <DayCell
                 key={d.toISOString()}
@@ -294,7 +296,7 @@ function DayCell({
     <button
       onClick={onClick}
       disabled={info.capacity === 0 || !inMonth}
-      className={`relative aspect-square rounded-lg text-left p-1 sm:p-1.5 flex flex-col overflow-hidden transition ${
+      className={`relative aspect-square rounded-lg text-left p-1.5 sm:p-2.5 flex flex-col overflow-hidden transition ${
         inMonth ? "bg-background hover:bg-secondary/70" : "bg-transparent opacity-40"
       } ${info.capacity === 0 ? "cursor-default" : "cursor-pointer"}`}
     >
