@@ -296,7 +296,7 @@ function DayCell({
     <button
       onClick={onClick}
       disabled={info.capacity === 0 || !inMonth}
-      className={`relative aspect-square rounded-lg text-left p-1.5 sm:p-2.5 flex flex-col overflow-hidden transition ${
+      className={`relative min-h-[3.5rem] sm:min-h-[4.25rem] rounded-lg text-left p-1.5 sm:p-2.5 flex flex-col overflow-hidden transition ${
         inMonth ? "bg-background hover:bg-secondary/70" : "bg-transparent opacity-40"
       } ${info.capacity === 0 ? "cursor-default" : "cursor-pointer"}`}
     >
