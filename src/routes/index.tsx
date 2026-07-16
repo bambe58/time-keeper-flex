@@ -461,11 +461,11 @@ function DayModal({
     <Sheet onClose={onClose}>
       <div className="flex items-start justify-between mb-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-            {dowNames[date.getDay()]}
+          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            {dowNames[date.getDay()].toUpperCase()}
           </p>
-          <h3 className="font-display text-3xl italic mt-1">
-            {date.getDate()} {MONTH_NAMES[date.getMonth()]}
+          <h3 className="font-display text-2xl font-semibold uppercase tracking-wide mt-1.5">
+            {date.getDate()} {MONTH_NAMES[date.getMonth()].toUpperCase()}
           </h3>
           <p className="text-xs text-muted-foreground mt-1 tabular-nums">
             Capienza {info.capacity}h — occupate {used}h — residue {Math.max(0, remaining)}h
@@ -618,8 +618,10 @@ function CategoryManager({
     <Sheet onClose={onClose}>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Impostazioni</p>
-          <h3 className="font-display text-3xl italic mt-1">Categorie</h3>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Impostazioni</p>
+          <h3 className="font-display text-2xl font-semibold uppercase tracking-wide mt-1.5">
+            Categorie
+          </h3>
         </div>
         <button onClick={onClose} className="p-1.5 rounded-full hover:bg-secondary">
           <X className="w-4 h-4" />
