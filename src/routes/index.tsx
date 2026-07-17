@@ -190,8 +190,37 @@ function Index() {
             )}
             <h2 className="font-display text-xl font-semibold uppercase tracking-wide">
               {MONTH_NAMES[month].toUpperCase()}{" "}
-              <span className="text-muted-foreground text-base font-sans">{year}</span>
+              {editingYear ? (
+                <input
+                  autoFocus
+                  type="number"
+                  value={yearInput}
+                  onChange={(e) => setYearInput(e.target.value)}
+                  onBlur={() => {
+                    const y = parseInt(yearInput, 10);
+                    if (!isNaN(y) && y >= 1900 && y <= 2999) setYear(y);
+                    setEditingYear(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                    if (e.key === "Escape") setEditingYear(false);
+                  }}
+                  className="w-20 text-base font-sans text-muted-foreground bg-transparent border-b border-border focus:outline-none focus:border-foreground tabular-nums"
+                />
+              ) : (
+                <button
+                  onClick={() => {
+                    setYearInput(String(year));
+                    setEditingYear(true);
+                  }}
+                  className="text-muted-foreground text-base font-sans hover:text-foreground transition tabular-nums"
+                  aria-label="Modifica anno"
+                >
+                  {year}
+                </button>
+              )}
             </h2>
+
           </div>
           <button
             onClick={nextMonth}
