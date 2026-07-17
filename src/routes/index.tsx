@@ -897,26 +897,40 @@ function CategoryForm({
               min={0}
               step={0.5}
               value={budgetDays}
-              onChange={(e) => setBudgetDays(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setBudgetDays(v);
+                if (entryMode === "both") {
+                  const n = parseFloat(v);
+                  setBudgetHours(isNaN(n) ? "" : String(n * 7.5));
+                }
+              }}
               className="w-full mt-1 rounded-lg border border-input bg-background px-3 py-2 text-sm tabular-nums"
             />
           </div>
         )}
         {(entryMode === "hourly" || entryMode === "both") && (
           <div>
-            <label className="text-xs text-muted-foreground">Ore disponibili</label>
+            <label className="text-xs text-muted-foreground">
+              Ore disponibili
+              {entryMode === "both" && (
+                <span className="text-[10px] opacity-70"> (auto)</span>
+              )}
+            </label>
             <input
               type="number"
               min={0}
               step={0.5}
               value={budgetHours}
               onChange={(e) => setBudgetHours(e.target.value)}
+              disabled={entryMode === "both"}
               placeholder={entryMode === "both" && budgetDays ? `${parseFloat(budgetDays) * 7.5}` : ""}
-              className="w-full mt-1 rounded-lg border border-input bg-background px-3 py-2 text-sm tabular-nums"
+              className="w-full mt-1 rounded-lg border border-input bg-background px-3 py-2 text-sm tabular-nums disabled:opacity-60"
             />
           </div>
         )}
       </div>
+
 
       {error && (
         <div className="flex items-start gap-2 text-xs text-destructive bg-destructive/10 rounded-md px-2 py-1.5">
