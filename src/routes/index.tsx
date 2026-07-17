@@ -715,13 +715,14 @@ function CategoryManager({
                         ? "Annuale"
                         : c.recurrence === "monthly"
                           ? "Mensile"
-                          : "Eterna"}{" "}
+                          : "∞"}{" "}
                       ·{" "}
                       {c.entryMode === "daily"
                         ? "Giornaliera"
                         : c.entryMode === "hourly"
                           ? "A ore"
                           : "Entrambe"}
+
                       {c.budgetDays !== undefined ? ` · ${c.budgetDays}g` : ""}
                       {c.budgetHours !== undefined ? ` · ${c.budgetHours}h` : ""}
                     </p>
