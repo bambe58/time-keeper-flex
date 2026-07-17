@@ -163,13 +163,57 @@ function Index() {
               Calendario
             </h1>
           </div>
-          <button
-            onClick={() => setShowCats(true)}
-            className="rounded-full border border-border bg-card p-3 hover:bg-secondary transition"
-            aria-label="Gestisci categorie"
-          >
-            <Settings2 className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const payload = JSON.stringify({ categories, entries, version: 1 }, null, 2);
+                const blob = new Blob([payload], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `calendario-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="rounded-full border border-border bg-card p-3 hover:bg-secondary transition"
+              aria-label="Esporta backup"
+              title="Esporta backup (JSON)"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+            <label
+              className="rounded-full border border-border bg-card p-3 hover:bg-secondary transition cursor-pointer"
+              aria-label="Importa backup"
+              title="Importa backup (JSON)"
+            >
+              <Upload className="w-4 h-4" />
+              <input
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  try {
+                    const data = JSON.parse(await f.text());
+                    if (Array.isArray(data.categories)) setCategories(data.categories);
+                    if (data.entries && typeof data.entries === "object") setEntries(data.entries);
+                  } catch {
+                    alert("File non valido");
+                  }
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            <button
+              onClick={() => setShowCats(true)}
+              className="rounded-full border border-border bg-card p-3 hover:bg-secondary transition"
+              aria-label="Gestisci categorie"
+            >
+              <Settings2 className="w-4 h-4" />
+            </button>
+          </div>
+
         </div>
       </header>
 
