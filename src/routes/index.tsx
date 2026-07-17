@@ -597,10 +597,18 @@ function DayModal({
                 type="number"
                 min={0.5}
                 step={0.5}
-                value={hours}
-                onChange={(e) => setHours(parseFloat(e.target.value) || 0)}
+                inputMode="decimal"
+                placeholder="es. 2"
+                value={hoursStr}
+                onChange={(e) => {
+                  let v = e.target.value;
+                  // strip leading zeros (but keep "0.x")
+                  v = v.replace(/^0+(?=\d)/, "");
+                  setHoursStr(v);
+                }}
                 className="w-full mt-1 rounded-lg border border-input bg-background px-3 py-2 text-sm tabular-nums"
               />
+
             </div>
           )}
 
