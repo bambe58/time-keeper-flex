@@ -10,6 +10,9 @@ import {
   Pencil,
   Check,
   AlertCircle,
+  Download,
+  Upload,
+
 } from "lucide-react";
 import {
   getItalianHolidays,
@@ -64,6 +67,9 @@ function Index() {
   const [entries, setEntries] = useState<EntriesMap>({});
   const [showCats, setShowCats] = useState(false);
   const [openDay, setOpenDay] = useState<Date | null>(null);
+  const [editingYear, setEditingYear] = useState(false);
+  const [yearInput, setYearInput] = useState("");
+
 
   useEffect(() => {
     if (!hydrated) return;
@@ -157,13 +163,57 @@ function Index() {
               Calendario
             </h1>
           </div>
-          <button
-            onClick={() => setShowCats(true)}
-            className="rounded-full border border-border bg-card p-3 hover:bg-secondary transition"
-            aria-label="Gestisci categorie"
-          >
-            <Settings2 className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const payload = JSON.stringify({ categories, entries, version: 1 }, null, 2);
+                const blob = new Blob([payload], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `calendario-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="rounded-full border border-border bg-card p-3 hover:bg-secondary transition"
+              aria-label="Esporta backup"
+              title="Esporta backup (JSON)"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+            <label
+              className="rounded-full border border-border bg-card p-3 hover:bg-secondary transition cursor-pointer"
+              aria-label="Importa backup"
+              title="Importa backup (JSON)"
+            >
+              <Upload className="w-4 h-4" />
+              <input
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  try {
+                    const data = JSON.parse(await f.text());
+                    if (Array.isArray(data.categories)) setCategories(data.categories);
+                    if (data.entries && typeof data.entries === "object") setEntries(data.entries);
+                  } catch {
+                    alert("File non valido");
+                  }
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            <button
+              onClick={() => setShowCats(true)}
+              className="rounded-full border border-border bg-card p-3 hover:bg-secondary transition"
+              aria-label="Gestisci categorie"
+            >
+              <Settings2 className="w-4 h-4" />
+            </button>
+          </div>
+
         </div>
       </header>
 
@@ -187,8 +237,37 @@ function Index() {
             )}
             <h2 className="font-display text-xl font-semibold uppercase tracking-wide">
               {MONTH_NAMES[month].toUpperCase()}{" "}
-              <span className="text-muted-foreground text-base font-sans">{year}</span>
+              {editingYear ? (
+                <input
+                  autoFocus
+                  type="number"
+                  value={yearInput}
+                  onChange={(e) => setYearInput(e.target.value)}
+                  onBlur={() => {
+                    const y = parseInt(yearInput, 10);
+                    if (!isNaN(y) && y >= 1900 && y <= 2999) setYear(y);
+                    setEditingYear(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                    if (e.key === "Escape") setEditingYear(false);
+                  }}
+                  className="w-20 text-base font-sans text-muted-foreground bg-transparent border-b border-border focus:outline-none focus:border-foreground tabular-nums"
+                />
+              ) : (
+                <button
+                  onClick={() => {
+                    setYearInput(String(year));
+                    setEditingYear(true);
+                  }}
+                  className="text-muted-foreground text-base font-sans hover:text-foreground transition tabular-nums"
+                  aria-label="Modifica anno"
+                >
+                  {year}
+                </button>
+              )}
             </h2>
+
           </div>
           <button
             onClick={nextMonth}
@@ -308,9 +387,10 @@ function DayCell({
               full ? "text-foreground font-bold" : "text-muted-foreground/60"
             }`}
           >
-            {used}/{remaining}
+            {used}/{info.capacity}
           </span>
         )}
+
       </div>
       <div className="flex flex-col gap-0.5 mt-auto">
         {entries.slice(0, 3).map((e) => {
@@ -406,8 +486,9 @@ function DayModal({
 
   const [catId, setCatId] = useState<string>(categories[0]?.id ?? "");
   const [kind, setKind] = useState<"daily" | "hourly">("daily");
-  const [hours, setHours] = useState<number>(1);
+  const [hoursStr, setHoursStr] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+
 
   const cat = categories.find((c) => c.id === catId);
 
@@ -421,11 +502,14 @@ function DayModal({
     setError(null);
     if (!cat) return;
     const chosenKind = cat.entryMode === "both" ? kind : cat.entryMode;
+    // Budget check
+    const r = remainingBudget(cat, entries, date.getFullYear(), date.getMonth());
     if (chosenKind === "daily") {
       if (hasHourly || hasDaily) return setError("categorie incompatibili");
-      if (info.capacity > remaining + 0.001) {
-        // capacity is what a daily takes
-      }
+      if (r.daysLeft !== undefined && r.daysLeft < 1)
+        return setError(`Budget esaurito per ${cat.name}`);
+      if (r.hoursLeft !== undefined && r.hoursLeft < info.capacity)
+        return setError(`Budget esaurito per ${cat.name}`);
       const entry: DayEntry = {
         id: crypto.randomUUID(),
         categoryId: cat.id,
@@ -435,8 +519,11 @@ function DayModal({
       onChange({ ...entries, [key]: [...dayEntries, entry] });
     } else {
       if (hasDaily) return setError("categorie incompatibili");
-      if (hours <= 0) return setError("Inserisci un valore maggiore di zero");
+      const hours = parseFloat(hoursStr);
+      if (!hours || hours <= 0) return setError("Inserisci un valore maggiore di zero");
       if (used + hours > info.capacity + 0.001) return setError("capienza oraria superata");
+      if (r.hoursLeft !== undefined && hours > r.hoursLeft + 0.001)
+        return setError(`Budget esaurito per ${cat.name}`);
       const entry: DayEntry = {
         id: crypto.randomUUID(),
         categoryId: cat.id,
@@ -444,8 +531,10 @@ function DayModal({
         hours,
       };
       onChange({ ...entries, [key]: [...dayEntries, entry] });
+      setHoursStr("");
     }
   }
+
 
   function remove(id: string) {
     const next = dayEntries.filter((e) => e.id !== id);
@@ -555,10 +644,18 @@ function DayModal({
                 type="number"
                 min={0.5}
                 step={0.5}
-                value={hours}
-                onChange={(e) => setHours(parseFloat(e.target.value) || 0)}
+                inputMode="decimal"
+                placeholder="es. 2"
+                value={hoursStr}
+                onChange={(e) => {
+                  let v = e.target.value;
+                  // strip leading zeros (but keep "0.x")
+                  v = v.replace(/^0+(?=\d)/, "");
+                  setHoursStr(v);
+                }}
                 className="w-full mt-1 rounded-lg border border-input bg-background px-3 py-2 text-sm tabular-nums"
               />
+
             </div>
           )}
 
@@ -665,13 +762,14 @@ function CategoryManager({
                         ? "Annuale"
                         : c.recurrence === "monthly"
                           ? "Mensile"
-                          : "Eterna"}{" "}
+                          : "∞"}{" "}
                       ·{" "}
                       {c.entryMode === "daily"
                         ? "Giornaliera"
                         : c.entryMode === "hourly"
                           ? "A ore"
                           : "Entrambe"}
+
                       {c.budgetDays !== undefined ? ` · ${c.budgetDays}g` : ""}
                       {c.budgetHours !== undefined ? ` · ${c.budgetHours}h` : ""}
                     </p>
@@ -762,10 +860,11 @@ function CategoryForm({
       budgetDays: budgetDays === "" ? undefined : parseFloat(budgetDays),
       budgetHours: budgetHours === "" ? undefined : parseFloat(budgetHours),
     };
-    // auto-compute hours from days if entryMode is "both" and only days set
-    if (c.entryMode === "both" && c.budgetDays !== undefined && c.budgetHours === undefined) {
+    // For "both" mode, hours are always derived from days (days * 7.5)
+    if (c.entryMode === "both" && c.budgetDays !== undefined) {
       c.budgetHours = c.budgetDays * 7.5;
     }
+
     onSave(c);
   }
 
@@ -816,7 +915,7 @@ function CategoryForm({
               onClick={() => setRecurrence(r)}
               className={`text-xs py-1.5 rounded-md transition ${recurrence === r ? "bg-card shadow-sm" : ""}`}
             >
-              {r === "annual" ? "Annuale" : r === "monthly" ? "Mensile" : "Eterna"}
+              {r === "annual" ? "Annuale" : r === "monthly" ? "Mensile" : "∞"}
             </button>
           ))}
         </div>
@@ -846,26 +945,40 @@ function CategoryForm({
               min={0}
               step={0.5}
               value={budgetDays}
-              onChange={(e) => setBudgetDays(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setBudgetDays(v);
+                if (entryMode === "both") {
+                  const n = parseFloat(v);
+                  setBudgetHours(isNaN(n) ? "" : String(n * 7.5));
+                }
+              }}
               className="w-full mt-1 rounded-lg border border-input bg-background px-3 py-2 text-sm tabular-nums"
             />
           </div>
         )}
         {(entryMode === "hourly" || entryMode === "both") && (
           <div>
-            <label className="text-xs text-muted-foreground">Ore disponibili</label>
+            <label className="text-xs text-muted-foreground">
+              Ore disponibili
+              {entryMode === "both" && (
+                <span className="text-[10px] opacity-70"> (auto)</span>
+              )}
+            </label>
             <input
               type="number"
               min={0}
               step={0.5}
               value={budgetHours}
               onChange={(e) => setBudgetHours(e.target.value)}
+              disabled={entryMode === "both"}
               placeholder={entryMode === "both" && budgetDays ? `${parseFloat(budgetDays) * 7.5}` : ""}
-              className="w-full mt-1 rounded-lg border border-input bg-background px-3 py-2 text-sm tabular-nums"
+              className="w-full mt-1 rounded-lg border border-input bg-background px-3 py-2 text-sm tabular-nums disabled:opacity-60"
             />
           </div>
         )}
       </div>
+
 
       {error && (
         <div className="flex items-start gap-2 text-xs text-destructive bg-destructive/10 rounded-md px-2 py-1.5">
