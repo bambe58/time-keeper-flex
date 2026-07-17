@@ -340,9 +340,10 @@ function DayCell({
               full ? "text-foreground font-bold" : "text-muted-foreground/60"
             }`}
           >
-            {used}/{remaining}
+            {used}/{info.capacity}
           </span>
         )}
+
       </div>
       <div className="flex flex-col gap-0.5 mt-auto">
         {entries.slice(0, 3).map((e) => {
