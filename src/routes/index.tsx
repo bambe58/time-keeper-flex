@@ -12,7 +12,7 @@ import {
   AlertCircle,
   Download,
   Upload,
-
+  CheckSquare,
 } from "lucide-react";
 import {
   getItalianHolidays,
@@ -69,6 +69,9 @@ function Index() {
   const [openDay, setOpenDay] = useState<Date | null>(null);
   const [editingYear, setEditingYear] = useState(false);
   const [yearInput, setYearInput] = useState("");
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [showBulk, setShowBulk] = useState(false);
 
 
   useEffect(() => {
@@ -295,24 +298,74 @@ function Index() {
             ))}
           </div>
           <div className="grid grid-cols-7 gap-1.5">
-            {days.map((d) => (
-              <DayCell
-                key={d.toISOString()}
-                date={d}
-                currentMonth={month}
-                holidays={holidays}
-                entries={entries[keyFromDate(d)] ?? []}
-                categories={categories}
-                onClick={() => {
-                  const info = getDayInfo(d, holidays);
-                  if (info.capacity === 0) return;
-                  if (d.getMonth() !== month) return;
-                  setOpenDay(d);
-                }}
-              />
-            ))}
+            {days.map((d) => {
+              const k = keyFromDate(d);
+              return (
+                <DayCell
+                  key={d.toISOString()}
+                  date={d}
+                  currentMonth={month}
+                  holidays={holidays}
+                  entries={entries[k] ?? []}
+                  categories={categories}
+                  selectionMode={selectionMode}
+                  selected={selectedKeys.has(k)}
+                  onActivate={() => {
+                    const info = getDayInfo(d, holidays);
+                    if (info.capacity === 0) return;
+                    if (d.getMonth() !== month) return;
+                    if (selectionMode) {
+                      setSelectedKeys((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(k)) next.delete(k);
+                        else next.add(k);
+                        return next;
+                      });
+                    } else {
+                      setOpenDay(d);
+                    }
+                  }}
+                  onLongPress={() => {
+                    const info = getDayInfo(d, holidays);
+                    if (info.capacity === 0) return;
+                    if (d.getMonth() !== month) return;
+                    if (!selectionMode) {
+                      setSelectionMode(true);
+                      setSelectedKeys(new Set([k]));
+                    }
+                  }}
+                />
+              );
+            })}
           </div>
         </div>
+
+        {selectionMode && (
+          <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 bg-card border border-border rounded-full shadow-lg pl-4 pr-2 py-2">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground tabular-nums">
+              {selectedKeys.size} selezionat{selectedKeys.size === 1 ? "o" : "i"}
+            </span>
+            <button
+              onClick={() => setShowBulk(true)}
+              disabled={selectedKeys.size === 0}
+              className="rounded-full bg-primary text-primary-foreground p-2 disabled:opacity-40"
+              aria-label="Applica categoria"
+              title="Applica categoria"
+            >
+              <CheckSquare className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => {
+                setSelectionMode(false);
+                setSelectedKeys(new Set());
+              }}
+              className="rounded-full hover:bg-secondary p-2"
+              aria-label="Esci dalla selezione"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         <BudgetFooter
           categories={categories}
@@ -337,6 +390,23 @@ function Index() {
           categories={categories}
           onClose={() => setShowCats(false)}
           onChange={setCategories}
+        />
+      )}
+      {showBulk && (
+        <BulkAssignModal
+          categories={categories}
+          entries={entries}
+          selectedKeys={Array.from(selectedKeys).sort()}
+          holidays={holidays}
+          year={year}
+          month0={month}
+          onClose={() => setShowBulk(false)}
+          onApply={(next) => {
+            setEntries(next);
+            setShowBulk(false);
+            setSelectionMode(false);
+            setSelectedKeys(new Set());
+          }}
         />
       )}
     </main>
