@@ -392,6 +392,23 @@ function Index() {
           onChange={setCategories}
         />
       )}
+      {showBulk && (
+        <BulkAssignModal
+          categories={categories}
+          entries={entries}
+          selectedKeys={Array.from(selectedKeys).sort()}
+          holidays={holidays}
+          year={year}
+          month0={month}
+          onClose={() => setShowBulk(false)}
+          onApply={(next) => {
+            setEntries(next);
+            setShowBulk(false);
+            setSelectionMode(false);
+            setSelectedKeys(new Set());
+          }}
+        />
+      )}
     </main>
   );
 }
