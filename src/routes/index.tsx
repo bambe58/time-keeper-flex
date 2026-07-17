@@ -439,8 +439,9 @@ function DayModal({
 
   const [catId, setCatId] = useState<string>(categories[0]?.id ?? "");
   const [kind, setKind] = useState<"daily" | "hourly">("daily");
-  const [hours, setHours] = useState<number>(1);
+  const [hoursStr, setHoursStr] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+
 
   const cat = categories.find((c) => c.id === catId);
 
