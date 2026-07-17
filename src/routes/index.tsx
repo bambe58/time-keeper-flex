@@ -867,7 +867,7 @@ function CategoryForm({
               onClick={() => setRecurrence(r)}
               className={`text-xs py-1.5 rounded-md transition ${recurrence === r ? "bg-card shadow-sm" : ""}`}
             >
-              {r === "annual" ? "Annuale" : r === "monthly" ? "Mensile" : "Eterna"}
+              {r === "annual" ? "Annuale" : r === "monthly" ? "Mensile" : "∞"}
             </button>
           ))}
         </div>
