@@ -455,11 +455,14 @@ function DayModal({
     setError(null);
     if (!cat) return;
     const chosenKind = cat.entryMode === "both" ? kind : cat.entryMode;
+    // Budget check
+    const r = remainingBudget(cat, entries, date.getFullYear(), date.getMonth());
     if (chosenKind === "daily") {
       if (hasHourly || hasDaily) return setError("categorie incompatibili");
-      if (info.capacity > remaining + 0.001) {
-        // capacity is what a daily takes
-      }
+      if (r.daysLeft !== undefined && r.daysLeft < 1)
+        return setError(`Budget esaurito per ${cat.name}`);
+      if (r.hoursLeft !== undefined && r.hoursLeft < info.capacity)
+        return setError(`Budget esaurito per ${cat.name}`);
       const entry: DayEntry = {
         id: crypto.randomUUID(),
         categoryId: cat.id,
@@ -469,8 +472,11 @@ function DayModal({
       onChange({ ...entries, [key]: [...dayEntries, entry] });
     } else {
       if (hasDaily) return setError("categorie incompatibili");
-      if (hours <= 0) return setError("Inserisci un valore maggiore di zero");
+      const hours = parseFloat(hoursStr);
+      if (!hours || hours <= 0) return setError("Inserisci un valore maggiore di zero");
       if (used + hours > info.capacity + 0.001) return setError("capienza oraria superata");
+      if (r.hoursLeft !== undefined && hours > r.hoursLeft + 0.001)
+        return setError(`Budget esaurito per ${cat.name}`);
       const entry: DayEntry = {
         id: crypto.randomUUID(),
         categoryId: cat.id,
@@ -478,8 +484,10 @@ function DayModal({
         hours,
       };
       onChange({ ...entries, [key]: [...dayEntries, entry] });
+      setHoursStr("");
     }
   }
+
 
   function remove(id: string) {
     const next = dayEntries.filter((e) => e.id !== id);
