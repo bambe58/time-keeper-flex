@@ -813,10 +813,11 @@ function CategoryForm({
       budgetDays: budgetDays === "" ? undefined : parseFloat(budgetDays),
       budgetHours: budgetHours === "" ? undefined : parseFloat(budgetHours),
     };
-    // auto-compute hours from days if entryMode is "both" and only days set
-    if (c.entryMode === "both" && c.budgetDays !== undefined && c.budgetHours === undefined) {
+    // For "both" mode, hours are always derived from days (days * 7.5)
+    if (c.entryMode === "both" && c.budgetDays !== undefined) {
       c.budgetHours = c.budgetDays * 7.5;
     }
+
     onSave(c);
   }
 
