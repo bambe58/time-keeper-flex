@@ -64,6 +64,9 @@ function Index() {
   const [entries, setEntries] = useState<EntriesMap>({});
   const [showCats, setShowCats] = useState(false);
   const [openDay, setOpenDay] = useState<Date | null>(null);
+  const [editingYear, setEditingYear] = useState(false);
+  const [yearInput, setYearInput] = useState("");
+
 
   useEffect(() => {
     if (!hydrated) return;
