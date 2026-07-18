@@ -13,6 +13,9 @@ import {
   Download,
   Upload,
   CheckSquare,
+  BookOpen,
+  CalendarCog,
+  Tags,
 } from "lucide-react";
 import {
   getItalianHolidays,
@@ -66,6 +69,9 @@ function Index() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [entries, setEntries] = useState<EntriesMap>({});
   const [showCats, setShowCats] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
+  const [showDayConfig, setShowDayConfig] = useState(false);
   const [openDay, setOpenDay] = useState<Date | null>(null);
   const [editingYear, setEditingYear] = useState(false);
   const [yearInput, setYearInput] = useState("");
@@ -209,9 +215,9 @@ function Index() {
               />
             </label>
             <button
-              onClick={() => setShowCats(true)}
+              onClick={() => setShowSettings(true)}
               className="rounded-full border border-border bg-card p-3 hover:bg-secondary transition"
-              aria-label="Gestisci categorie"
+              aria-label="Impostazioni"
             >
               <Settings2 className="w-4 h-4" />
             </button>
@@ -409,9 +415,29 @@ function Index() {
           }}
         />
       )}
+      {showSettings && (
+        <SettingsMenu
+          onClose={() => setShowSettings(false)}
+          onOpenCategories={() => {
+            setShowSettings(false);
+            setShowCats(true);
+          }}
+          onOpenGuide={() => {
+            setShowSettings(false);
+            setShowGuide(true);
+          }}
+          onOpenDayConfig={() => {
+            setShowSettings(false);
+            setShowDayConfig(true);
+          }}
+        />
+      )}
+      {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
+      {showDayConfig && <DayConfigModal onClose={() => setShowDayConfig(false)} />}
     </main>
   );
 }
+
 
 function DayCell({
   date,
@@ -1298,6 +1324,277 @@ function BulkAssignModal({
           </button>
         </div>
       )}
+    </Sheet>
+  );
+}
+
+// -------------- Settings Menu --------------
+function SettingsMenu({
+  onClose,
+  onOpenCategories,
+  onOpenGuide,
+  onOpenDayConfig,
+}: {
+  onClose: () => void;
+  onOpenCategories: () => void;
+  onOpenGuide: () => void;
+  onOpenDayConfig: () => void;
+}) {
+  const items = [
+    { label: "Gestione Categorie", icon: Tags, onClick: onOpenCategories },
+    { label: "Guida Utilizzo", icon: BookOpen, onClick: onOpenGuide },
+    { label: "Configurazione Giorni", icon: CalendarCog, onClick: onOpenDayConfig },
+  ];
+  return (
+    <Sheet onClose={onClose}>
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Menu</p>
+          <h3 className="font-display text-2xl font-semibold uppercase tracking-wide mt-1.5">
+            Impostazioni
+          </h3>
+        </div>
+        <button onClick={onClose} className="p-1.5 rounded-full hover:bg-secondary">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="space-y-2">
+        {items.map((it) => {
+          const Icon = it.icon;
+          return (
+            <button
+              key={it.label}
+              onClick={it.onClick}
+              className="w-full flex items-center gap-3 rounded-xl border border-border p-4 hover:bg-secondary transition text-left"
+            >
+              <span className="rounded-lg bg-secondary p-2">
+                <Icon className="w-4 h-4" />
+              </span>
+              <span className="flex-1 text-sm font-medium uppercase tracking-wide">
+                {it.label}
+              </span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
+          );
+        })}
+      </div>
+    </Sheet>
+  );
+}
+
+// -------------- Guide Modal (Carousel) --------------
+function GuideModal({ onClose }: { onClose: () => void }) {
+  const slides = [
+    {
+      title: "Benvenuto",
+      body:
+        "Questa è una scheda segnaposto. Qui potrai descrivere la panoramica generale dell'app, il suo scopo e i concetti principali.",
+    },
+    {
+      title: "Inserire giorni",
+      body:
+        "Testo segnaposto per spiegare come toccare una cella per aggiungere una categoria, oppure tenere premuto per attivare la selezione multipla.",
+    },
+    {
+      title: "Categorie e budget",
+      body:
+        "Testo segnaposto sulla gestione delle categorie, i budget annuali/mensili e la differenza tra inserimento giornaliero e a ore.",
+    },
+  ];
+  const [idx, setIdx] = useState(0);
+  const s = slides[idx];
+  return (
+    <Sheet onClose={onClose}>
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            Scheda {idx + 1} / {slides.length}
+          </p>
+          <h3 className="font-display text-2xl font-semibold uppercase tracking-wide mt-1.5">
+            Guida
+          </h3>
+        </div>
+        <button onClick={onClose} className="p-1.5 rounded-full hover:bg-secondary">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="rounded-2xl border border-border bg-secondary/40 p-5 min-h-[180px] flex flex-col">
+        <h4 className="font-display text-lg font-semibold uppercase tracking-wide mb-2">
+          {s.title}
+        </h4>
+        <p className="text-sm text-muted-foreground leading-relaxed">{s.body}</p>
+      </div>
+      <div className="flex items-center justify-between mt-4">
+        <button
+          onClick={() => setIdx((i) => Math.max(0, i - 1))}
+          disabled={idx === 0}
+          className="p-2 rounded-full hover:bg-secondary disabled:opacity-30"
+          aria-label="Precedente"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <div className="flex gap-1.5">
+          {slides.map((_, i) => (
+            <span
+              key={i}
+              className={`w-2 h-2 rounded-full transition ${
+                i === idx ? "bg-foreground" : "bg-border"
+              }`}
+            />
+          ))}
+        </div>
+        <button
+          onClick={() => setIdx((i) => Math.min(slides.length - 1, i + 1))}
+          disabled={idx === slides.length - 1}
+          className="p-2 rounded-full hover:bg-secondary disabled:opacity-30"
+          aria-label="Successiva"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+    </Sheet>
+  );
+}
+
+// -------------- Day Config Modal (UI only) --------------
+function DayConfigModal({ onClose }: { onClose: () => void }) {
+  const dows = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
+  const [holidays, setHolidays] = useState<boolean[]>([false, false, false, false, false, true, true]);
+  const [hoursHoliday, setHoursHoliday] = useState("0");
+  const [hoursPre, setHoursPre] = useState("5");
+  const [hoursWork, setHoursWork] = useState("7.5");
+  const [exceptions, setExceptions] = useState<{ id: string; date: string; label: string }[]>([]);
+
+  return (
+    <Sheet onClose={onClose}>
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            Impostazioni
+          </p>
+          <h3 className="font-display text-2xl font-semibold uppercase tracking-wide mt-1.5">
+            Configurazione Giorni
+          </h3>
+        </div>
+        <button onClick={onClose} className="p-1.5 rounded-full hover:bg-secondary">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div className="space-y-5">
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">
+            Giorni festivi
+          </p>
+          <div className="grid grid-cols-7 gap-1.5">
+            {dows.map((d, i) => (
+              <label
+                key={i}
+                className={`flex flex-col items-center gap-1.5 rounded-lg border p-2 cursor-pointer transition ${
+                  holidays[i]
+                    ? "border-foreground bg-secondary"
+                    : "border-border hover:bg-secondary/50"
+                }`}
+              >
+                <span className="text-[10px] uppercase tracking-wide">{d}</span>
+                <input
+                  type="checkbox"
+                  checked={holidays[i]}
+                  onChange={(e) =>
+                    setHolidays((prev) => prev.map((v, j) => (j === i ? e.target.checked : v)))
+                  }
+                  className="accent-foreground"
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">
+            Ore standard
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: "Festivi", v: hoursHoliday, s: setHoursHoliday },
+              { label: "Prefestivi", v: hoursPre, s: setHoursPre },
+              { label: "Feriali", v: hoursWork, s: setHoursWork },
+            ].map((f) => (
+              <div key={f.label}>
+                <label className="text-[11px] text-muted-foreground">{f.label}</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  inputMode="decimal"
+                  value={f.v}
+                  onChange={(e) => f.s(e.target.value)}
+                  className="w-full mt-1 rounded-lg border border-input bg-background px-3 py-2 text-sm tabular-nums"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Eccezioni</p>
+            <button
+              onClick={() =>
+                setExceptions((prev) => [
+                  ...prev,
+                  { id: crypto.randomUUID(), date: "", label: "" },
+                ])
+              }
+              className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-[11px] uppercase tracking-wide hover:bg-secondary"
+            >
+              <Plus className="w-3 h-3" /> Aggiungi Data
+            </button>
+          </div>
+          <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
+            {exceptions.length === 0 ? (
+              <p className="text-xs text-muted-foreground p-4 text-center">
+                Nessuna eccezione.
+              </p>
+            ) : (
+              exceptions.map((ex) => (
+                <div key={ex.id} className="flex items-center gap-2 p-2.5">
+                  <input
+                    type="date"
+                    value={ex.date}
+                    onChange={(e) =>
+                      setExceptions((prev) =>
+                        prev.map((x) => (x.id === ex.id ? { ...x, date: e.target.value } : x)),
+                      )
+                    }
+                    className="rounded-md border border-input bg-background px-2 py-1.5 text-xs tabular-nums"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Descrizione"
+                    value={ex.label}
+                    onChange={(e) =>
+                      setExceptions((prev) =>
+                        prev.map((x) => (x.id === ex.id ? { ...x, label: e.target.value } : x)),
+                      )
+                    }
+                    className="flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-xs"
+                  />
+                  <button
+                    onClick={() =>
+                      setExceptions((prev) => prev.filter((x) => x.id !== ex.id))
+                    }
+                    className="p-1.5 rounded hover:bg-secondary text-muted-foreground"
+                    aria-label="Rimuovi eccezione"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
     </Sheet>
   );
 }
