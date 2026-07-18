@@ -419,20 +419,48 @@ function DayCell({
   holidays,
   entries,
   categories,
-  onClick,
+  selectionMode,
+  selected,
+  onActivate,
+  onLongPress,
 }: {
   date: Date;
   currentMonth: number;
   holidays: Set<string>;
   entries: DayEntry[];
   categories: Category[];
-  onClick: () => void;
+  selectionMode: boolean;
+  selected: boolean;
+  onActivate: () => void;
+  onLongPress: () => void;
 }) {
   const info = getDayInfo(date, holidays);
   const inMonth = date.getMonth() === currentMonth;
   const used = entries.reduce((s, e) => s + e.hours, 0);
   const remaining = Math.max(0, info.capacity - used);
   const full = info.capacity > 0 && remaining <= 0.001;
+  const disabled = info.capacity === 0 || !inMonth;
+
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longFired = useRef(false);
+  const start = () => {
+    if (disabled) return;
+    longFired.current = false;
+    timer.current = setTimeout(() => {
+      longFired.current = true;
+      onLongPress();
+    }, 450);
+  };
+  const cancel = () => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+  };
+  const click = () => {
+    if (longFired.current) return;
+    onActivate();
+  };
 
   const numColor =
     info.type === "holiday"
@@ -443,11 +471,18 @@ function DayCell({
 
   return (
     <button
-      onClick={onClick}
-      disabled={info.capacity === 0 || !inMonth}
-      className={`relative min-h-[3.5rem] sm:min-h-[4.25rem] rounded-lg text-left p-1.5 sm:p-2.5 flex flex-col overflow-hidden transition ${
+      onClick={click}
+      onPointerDown={start}
+      onPointerUp={cancel}
+      onPointerLeave={cancel}
+      onPointerCancel={cancel}
+      onContextMenu={(e) => e.preventDefault()}
+      disabled={disabled}
+      className={`relative min-h-[3.5rem] sm:min-h-[4.25rem] rounded-lg text-left p-1.5 sm:p-2.5 flex flex-col overflow-hidden transition select-none ${
         inMonth ? "bg-background hover:bg-secondary/70" : "bg-transparent opacity-40"
-      } ${info.capacity === 0 ? "cursor-default" : "cursor-pointer"}`}
+      } ${disabled ? "cursor-default" : "cursor-pointer"} ${
+        selectionMode && selected ? "ring-2 ring-primary bg-primary/10" : ""
+      } ${selectionMode && !selected && inMonth && info.capacity > 0 ? "ring-1 ring-border" : ""}`}
     >
       <div className="flex items-start justify-between">
         <span className={`text-sm font-medium tabular-nums ${numColor}`}>{date.getDate()}</span>
@@ -460,7 +495,6 @@ function DayCell({
             {used}/{info.capacity}
           </span>
         )}
-
       </div>
       <div className="flex flex-col gap-0.5 mt-auto">
         {entries.slice(0, 3).map((e) => {
@@ -484,6 +518,7 @@ function DayCell({
     </button>
   );
 }
+
 
 function BudgetFooter({
   categories,
