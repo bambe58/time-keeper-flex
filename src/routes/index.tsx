@@ -1109,3 +1109,195 @@ function CategoryForm({
     </div>
   );
 }
+
+// -------------- Bulk Assign Modal --------------
+function BulkAssignModal({
+  categories,
+  entries,
+  selectedKeys,
+  holidays,
+  year,
+  month0,
+  onClose,
+  onApply,
+}: {
+  categories: Category[];
+  entries: EntriesMap;
+  selectedKeys: string[];
+  holidays: Set<string>;
+  year: number;
+  month0: number;
+  onClose: () => void;
+  onApply: (next: EntriesMap) => void;
+}) {
+  const [catId, setCatId] = useState<string>(categories[0]?.id ?? "");
+  const [kind, setKind] = useState<"daily" | "hourly">("daily");
+  const [hoursStr, setHoursStr] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+
+  const cat = categories.find((c) => c.id === catId);
+
+  useEffect(() => {
+    if (!cat) return;
+    if (cat.entryMode === "daily") setKind("daily");
+    else if (cat.entryMode === "hourly") setKind("hourly");
+  }, [catId, cat]);
+
+  function dateFromKey(key: string) {
+    const [y, m, d] = key.split("-").map((s) => parseInt(s, 10));
+    return new Date(y, m - 1, d);
+  }
+
+  function apply() {
+    setError(null);
+    if (!cat) return setError("Seleziona una categoria");
+    if (selectedKeys.length === 0) return setError("Nessun giorno selezionato");
+    const chosenKind: "daily" | "hourly" =
+      cat.entryMode === "both" ? kind : cat.entryMode;
+
+    let hoursPerDay = 0;
+    if (chosenKind === "hourly") {
+      const h = parseFloat(hoursStr);
+      if (!h || h <= 0) return setError("Inserisci un valore di ore maggiore di zero");
+      hoursPerDay = h;
+    }
+
+    // Atomic pre-check: validate all days first
+    const r = remainingBudget(cat, entries, year, month0);
+    let totalHoursNeeded = 0;
+    let totalDaysNeeded = 0;
+
+    for (const k of selectedKeys) {
+      const d = dateFromKey(k);
+      const info = getDayInfo(d, holidays);
+      const existing = entries[k] ?? [];
+      if (info.capacity === 0)
+        return setError(`Errore: ${k} è un giorno non lavorativo`);
+      if (existing.length > 0)
+        return setError(`Errore: il giorno ${k} ha già una categoria assegnata`);
+
+      const need = chosenKind === "daily" ? info.capacity : hoursPerDay;
+      if (need > info.capacity + 0.001)
+        return setError(`Errore: capienza superata per ${k} (${need}h > ${info.capacity}h)`);
+
+      totalHoursNeeded += need;
+      if (chosenKind === "daily") totalDaysNeeded += 1;
+    }
+
+    if (r.daysLeft !== undefined && totalDaysNeeded > r.daysLeft)
+      return setError(
+        `Errore: budget insufficiente per ${cat.name} (servono ${totalDaysNeeded}g, disponibili ${r.daysLeft}g)`,
+      );
+    if (r.hoursLeft !== undefined && totalHoursNeeded > r.hoursLeft + 0.001)
+      return setError(
+        `Errore: budget insufficiente per ${cat.name} (servono ${totalHoursNeeded}h, disponibili ${r.hoursLeft}h)`,
+      );
+
+    // Apply
+    const next: EntriesMap = { ...entries };
+    for (const k of selectedKeys) {
+      const d = dateFromKey(k);
+      const info = getDayInfo(d, holidays);
+      const need = chosenKind === "daily" ? info.capacity : hoursPerDay;
+      const entry: DayEntry = {
+        id: crypto.randomUUID(),
+        categoryId: cat.id,
+        kind: chosenKind,
+        hours: need,
+      };
+      next[k] = [...(next[k] ?? []), entry];
+    }
+    onApply(next);
+  }
+
+  return (
+    <Sheet onClose={onClose}>
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            Selezione multipla
+          </p>
+          <h3 className="font-display text-2xl font-semibold uppercase tracking-wide mt-1.5">
+            {selectedKeys.length} giorn{selectedKeys.length === 1 ? "o" : "i"}
+          </h3>
+        </div>
+        <button onClick={onClose} className="p-1.5 rounded-full hover:bg-secondary">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {categories.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Crea prima una categoria.</p>
+      ) : (
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-muted-foreground">Categoria</label>
+            <select
+              value={catId}
+              onChange={(e) => setCatId(e.target.value)}
+              className="w-full mt-1 rounded-lg border border-input bg-background px-3 py-2 text-sm"
+            >
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.symbol} — {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {cat?.entryMode === "both" && (
+            <div className="flex gap-1 p-1 rounded-lg bg-secondary">
+              <button
+                onClick={() => setKind("daily")}
+                className={`flex-1 text-xs py-1.5 rounded-md transition ${kind === "daily" ? "bg-card shadow-sm" : ""}`}
+              >
+                Giornata intera
+              </button>
+              <button
+                onClick={() => setKind("hourly")}
+                className={`flex-1 text-xs py-1.5 rounded-md transition ${kind === "hourly" ? "bg-card shadow-sm" : ""}`}
+              >
+                A ore
+              </button>
+            </div>
+          )}
+
+          {(kind === "hourly" || cat?.entryMode === "hourly") &&
+            cat?.entryMode !== "daily" && (
+              <div>
+                <label className="text-xs text-muted-foreground">Ore (per ogni giorno)</label>
+                <input
+                  type="number"
+                  min={0.5}
+                  step={0.5}
+                  inputMode="decimal"
+                  placeholder="es. 2"
+                  value={hoursStr}
+                  onChange={(e) => {
+                    let v = e.target.value;
+                    v = v.replace(/^0+(?=\d)/, "");
+                    setHoursStr(v);
+                  }}
+                  className="w-full mt-1 rounded-lg border border-input bg-background px-3 py-2 text-sm tabular-nums"
+                />
+              </div>
+            )}
+
+          {error && (
+            <div className="flex items-start gap-2 text-xs text-destructive bg-destructive/10 rounded-md px-2 py-1.5">
+              <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <button
+            onClick={apply}
+            className="w-full bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-medium hover:opacity-90"
+          >
+            Applica a {selectedKeys.length} giorn{selectedKeys.length === 1 ? "o" : "i"}
+          </button>
+        </div>
+      )}
+    </Sheet>
+  );
+}
