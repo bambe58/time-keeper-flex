@@ -69,6 +69,9 @@ function Index() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [entries, setEntries] = useState<EntriesMap>({});
   const [showCats, setShowCats] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
+  const [showDayConfig, setShowDayConfig] = useState(false);
   const [openDay, setOpenDay] = useState<Date | null>(null);
   const [editingYear, setEditingYear] = useState(false);
   const [yearInput, setYearInput] = useState("");
