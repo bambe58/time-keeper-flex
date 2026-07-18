@@ -415,9 +415,29 @@ function Index() {
           }}
         />
       )}
+      {showSettings && (
+        <SettingsMenu
+          onClose={() => setShowSettings(false)}
+          onOpenCategories={() => {
+            setShowSettings(false);
+            setShowCats(true);
+          }}
+          onOpenGuide={() => {
+            setShowSettings(false);
+            setShowGuide(true);
+          }}
+          onOpenDayConfig={() => {
+            setShowSettings(false);
+            setShowDayConfig(true);
+          }}
+        />
+      )}
+      {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
+      {showDayConfig && <DayConfigModal onClose={() => setShowDayConfig(false)} />}
     </main>
   );
 }
+
 
 function DayCell({
   date,
