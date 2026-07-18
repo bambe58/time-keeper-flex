@@ -13,6 +13,9 @@ import {
   Download,
   Upload,
   CheckSquare,
+  BookOpen,
+  CalendarCog,
+  Tags,
 } from "lucide-react";
 import {
   getItalianHolidays,
