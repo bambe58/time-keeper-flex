@@ -215,9 +215,9 @@ function Index() {
               />
             </label>
             <button
-              onClick={() => setShowCats(true)}
+              onClick={() => setShowSettings(true)}
               className="rounded-full border border-border bg-card p-3 hover:bg-secondary transition"
-              aria-label="Gestisci categorie"
+              aria-label="Impostazioni"
             >
               <Settings2 className="w-4 h-4" />
             </button>
