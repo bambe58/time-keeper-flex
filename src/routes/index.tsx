@@ -163,7 +163,7 @@ function Index() {
               Il tuo tempo
             </p>
             <h1 className="font-display text-2xl font-semibold uppercase tracking-wide leading-none mt-1.5">
-              Calendario
+              CALENDARIO
             </h1>
           </div>
           <div className="flex items-center gap-2">
