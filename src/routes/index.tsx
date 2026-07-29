@@ -74,6 +74,7 @@ function Index() {
   const [month, setMonth] = useState(today.getMonth());
   const [categories, setCategories] = useState<Category[]>([]);
   const [entries, setEntries] = useState<EntriesMap>({});
+  const [dayConfig, setDayConfig] = useState<DayConfig>(DEFAULT_DAY_CONFIG);
   const [showCats, setShowCats] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
@@ -90,6 +91,7 @@ function Index() {
     if (!hydrated) return;
     setCategories(loadCategories());
     setEntries(loadEntries());
+    setDayConfig(loadDayConfig());
   }, [hydrated]);
 
   useEffect(() => {
@@ -100,6 +102,10 @@ function Index() {
     if (!hydrated) return;
     saveEntries(entries);
   }, [entries, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveDayConfig(dayConfig);
+  }, [dayConfig, hydrated]);
 
   const holidays = useMemo(() => getItalianHolidays(year), [year]);
   const days = useMemo(() => monthMatrix(year, month), [year, month]);
