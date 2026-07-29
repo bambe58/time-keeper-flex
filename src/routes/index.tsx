@@ -522,6 +522,7 @@ function DayCell({
       onPointerCancel={cancel}
       onContextMenu={(e) => e.preventDefault()}
       disabled={disabled}
+      title={info.note}
       className={`relative min-h-[3.5rem] sm:min-h-[4.25rem] rounded-lg text-left p-1.5 sm:p-2.5 flex flex-col overflow-hidden transition select-none ${
         inMonth ? "bg-background hover:bg-secondary/70" : "bg-transparent opacity-40"
       } ${disabled ? "cursor-default" : "cursor-pointer"} ${
