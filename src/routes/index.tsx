@@ -187,7 +187,7 @@ function Index() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
-                const payload = JSON.stringify({ categories, entries, version: 1 }, null, 2);
+                const payload = JSON.stringify({ categories, entries, dayConfig, version: 2 }, null, 2);
                 const blob = new Blob([payload], { type: "application/json" });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
