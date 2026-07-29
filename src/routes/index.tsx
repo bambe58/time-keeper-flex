@@ -449,7 +449,13 @@ function Index() {
         />
       )}
       {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
-      {showDayConfig && <DayConfigModal onClose={() => setShowDayConfig(false)} />}
+      {showDayConfig && (
+        <DayConfigModal
+          config={dayConfig}
+          onChange={setDayConfig}
+          onClose={() => setShowDayConfig(false)}
+        />
+      )}
     </main>
   );
 }
