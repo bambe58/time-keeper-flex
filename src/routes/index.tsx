@@ -419,6 +419,7 @@ function Index() {
           entries={entries}
           selectedKeys={Array.from(selectedKeys).sort()}
           holidays={holidays}
+          dayConfig={dayConfig}
           year={year}
           month0={month}
           onClose={() => setShowBulk(false)}
