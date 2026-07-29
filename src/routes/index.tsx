@@ -459,6 +459,7 @@ function DayCell({
   date,
   currentMonth,
   holidays,
+  dayConfig,
   entries,
   categories,
   selectionMode,
@@ -469,6 +470,7 @@ function DayCell({
   date: Date;
   currentMonth: number;
   holidays: Set<string>;
+  dayConfig: DayConfig;
   entries: DayEntry[];
   categories: Category[];
   selectionMode: boolean;
@@ -476,7 +478,7 @@ function DayCell({
   onActivate: () => void;
   onLongPress: () => void;
 }) {
-  const info = getDayInfo(date, holidays);
+  const info = getDayInfo(date, holidays, dayConfig);
   const inMonth = date.getMonth() === currentMonth;
   const used = entries.reduce((s, e) => s + e.hours, 0);
   const remaining = Math.max(0, info.capacity - used);
