@@ -23,15 +23,21 @@ import {
   keyFromDate,
   monthMatrix,
   remainingBudget,
+  DEFAULT_DAY_CONFIG,
   type Category,
   type EntriesMap,
   type DayEntry,
+  type DayConfig,
+  type DateException,
+  type WeekdayException,
 } from "@/lib/calendar-utils";
 import {
   loadCategories,
   saveCategories,
   loadEntries,
   saveEntries,
+  loadDayConfig,
+  saveDayConfig,
   PALETTE,
 } from "@/lib/storage";
 
@@ -68,6 +74,7 @@ function Index() {
   const [month, setMonth] = useState(today.getMonth());
   const [categories, setCategories] = useState<Category[]>([]);
   const [entries, setEntries] = useState<EntriesMap>({});
+  const [dayConfig, setDayConfig] = useState<DayConfig>(DEFAULT_DAY_CONFIG);
   const [showCats, setShowCats] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
@@ -84,6 +91,7 @@ function Index() {
     if (!hydrated) return;
     setCategories(loadCategories());
     setEntries(loadEntries());
+    setDayConfig(loadDayConfig());
   }, [hydrated]);
 
   useEffect(() => {
@@ -94,6 +102,10 @@ function Index() {
     if (!hydrated) return;
     saveEntries(entries);
   }, [entries, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveDayConfig(dayConfig);
+  }, [dayConfig, hydrated]);
 
   const holidays = useMemo(() => getItalianHolidays(year), [year]);
   const days = useMemo(() => monthMatrix(year, month), [year, month]);
@@ -105,7 +117,7 @@ function Index() {
     let empty = 0;
     for (const d of days) {
       if (d.getMonth() !== month) continue;
-      const info = getDayInfo(d, holidays);
+      const info = getDayInfo(d, holidays, dayConfig);
       if (info.capacity === 0) continue;
       total++;
       const list = entries[info.key] ?? [];
@@ -175,7 +187,7 @@ function Index() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
-                const payload = JSON.stringify({ categories, entries, version: 1 }, null, 2);
+                const payload = JSON.stringify({ categories, entries, dayConfig, version: 2 }, null, 2);
                 const blob = new Blob([payload], { type: "application/json" });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
@@ -207,6 +219,7 @@ function Index() {
                     const data = JSON.parse(await f.text());
                     if (Array.isArray(data.categories)) setCategories(data.categories);
                     if (data.entries && typeof data.entries === "object") setEntries(data.entries);
+                    if (data.dayConfig && typeof data.dayConfig === "object") setDayConfig(data.dayConfig);
                   } catch {
                     alert("File non valido");
                   }
@@ -312,12 +325,13 @@ function Index() {
                   date={d}
                   currentMonth={month}
                   holidays={holidays}
+                  dayConfig={dayConfig}
                   entries={entries[k] ?? []}
                   categories={categories}
                   selectionMode={selectionMode}
                   selected={selectedKeys.has(k)}
                   onActivate={() => {
-                    const info = getDayInfo(d, holidays);
+                    const info = getDayInfo(d, holidays, dayConfig);
                     if (info.capacity === 0) return;
                     if (d.getMonth() !== month) return;
                     if (selectionMode) {
@@ -332,7 +346,7 @@ function Index() {
                     }
                   }}
                   onLongPress={() => {
-                    const info = getDayInfo(d, holidays);
+                    const info = getDayInfo(d, holidays, dayConfig);
                     if (info.capacity === 0) return;
                     if (d.getMonth() !== month) return;
                     if (!selectionMode) {
@@ -385,6 +399,7 @@ function Index() {
         <DayModal
           date={openDay}
           holidays={holidays}
+          dayConfig={dayConfig}
           categories={categories}
           entries={entries}
           onClose={() => setOpenDay(null)}
@@ -404,6 +419,7 @@ function Index() {
           entries={entries}
           selectedKeys={Array.from(selectedKeys).sort()}
           holidays={holidays}
+          dayConfig={dayConfig}
           year={year}
           month0={month}
           onClose={() => setShowBulk(false)}
@@ -433,7 +449,13 @@ function Index() {
         />
       )}
       {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
-      {showDayConfig && <DayConfigModal onClose={() => setShowDayConfig(false)} />}
+      {showDayConfig && (
+        <DayConfigModal
+          config={dayConfig}
+          onChange={setDayConfig}
+          onClose={() => setShowDayConfig(false)}
+        />
+      )}
     </main>
   );
 }
@@ -443,6 +465,7 @@ function DayCell({
   date,
   currentMonth,
   holidays,
+  dayConfig,
   entries,
   categories,
   selectionMode,
@@ -453,6 +476,7 @@ function DayCell({
   date: Date;
   currentMonth: number;
   holidays: Set<string>;
+  dayConfig: DayConfig;
   entries: DayEntry[];
   categories: Category[];
   selectionMode: boolean;
@@ -460,7 +484,7 @@ function DayCell({
   onActivate: () => void;
   onLongPress: () => void;
 }) {
-  const info = getDayInfo(date, holidays);
+  const info = getDayInfo(date, holidays, dayConfig);
   const inMonth = date.getMonth() === currentMonth;
   const used = entries.reduce((s, e) => s + e.hours, 0);
   const remaining = Math.max(0, info.capacity - used);
@@ -504,6 +528,7 @@ function DayCell({
       onPointerCancel={cancel}
       onContextMenu={(e) => e.preventDefault()}
       disabled={disabled}
+      title={info.note}
       className={`relative min-h-[3.5rem] sm:min-h-[4.25rem] rounded-lg text-left p-1.5 sm:p-2.5 flex flex-col overflow-hidden transition select-none ${
         inMonth ? "bg-background hover:bg-secondary/70" : "bg-transparent opacity-40"
       } ${disabled ? "cursor-default" : "cursor-pointer"} ${
@@ -595,6 +620,7 @@ function BudgetFooter({
 function DayModal({
   date,
   holidays,
+  dayConfig,
   categories,
   entries,
   onClose,
@@ -602,12 +628,13 @@ function DayModal({
 }: {
   date: Date;
   holidays: Set<string>;
+  dayConfig: DayConfig;
   categories: Category[];
   entries: EntriesMap;
   onClose: () => void;
   onChange: (e: EntriesMap) => void;
 }) {
-  const info = getDayInfo(date, holidays);
+  const info = getDayInfo(date, holidays, dayConfig);
   const key = info.key;
   const dayEntries = entries[key] ?? [];
   const used = dayEntries.reduce((s, e) => s + e.hours, 0);
@@ -690,6 +717,11 @@ function DayModal({
           <p className="text-xs text-muted-foreground mt-1 tabular-nums">
             Capienza {info.capacity}h — occupate {used}h — residue {Math.max(0, remaining)}h
           </p>
+          {info.note && (
+            <p className="text-[11px] italic text-muted-foreground/80 mt-0.5 normal-case">
+              {info.note}
+            </p>
+          )}
         </div>
         <button onClick={onClose} className="p-1.5 rounded-full hover:bg-secondary">
           <X className="w-4 h-4" />
@@ -1142,6 +1174,7 @@ function BulkAssignModal({
   entries,
   selectedKeys,
   holidays,
+  dayConfig,
   year,
   month0,
   onClose,
@@ -1151,6 +1184,7 @@ function BulkAssignModal({
   entries: EntriesMap;
   selectedKeys: string[];
   holidays: Set<string>;
+  dayConfig: DayConfig;
   year: number;
   month0: number;
   onClose: () => void;
@@ -1195,7 +1229,7 @@ function BulkAssignModal({
 
     for (const k of selectedKeys) {
       const d = dateFromKey(k);
-      const info = getDayInfo(d, holidays);
+      const info = getDayInfo(d, holidays, dayConfig);
       const existing = entries[k] ?? [];
       if (info.capacity === 0)
         return setError(`Errore: ${k} è un giorno non lavorativo`);
@@ -1223,7 +1257,7 @@ function BulkAssignModal({
     const next: EntriesMap = { ...entries };
     for (const k of selectedKeys) {
       const d = dateFromKey(k);
-      const info = getDayInfo(d, holidays);
+      const info = getDayInfo(d, holidays, dayConfig);
       const need = chosenKind === "daily" ? info.capacity : hoursPerDay;
       const entry: DayEntry = {
         id: crypto.randomUUID(),
@@ -1456,14 +1490,37 @@ function GuideModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-// -------------- Day Config Modal (UI only) --------------
-function DayConfigModal({ onClose }: { onClose: () => void }) {
-  const dows = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
-  const [holidays, setHolidays] = useState<boolean[]>([false, false, false, false, false, true, true]);
-  const [hoursHoliday, setHoursHoliday] = useState("0");
-  const [hoursPre, setHoursPre] = useState("5");
-  const [hoursWork, setHoursWork] = useState("7.5");
-  const [exceptions, setExceptions] = useState<{ id: string; date: string; label: string }[]>([]);
+// -------------- Day Config Modal --------------
+const DOW_LONG = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"];
+
+function DayConfigModal({
+  config,
+  onChange,
+  onClose,
+}: {
+  config: DayConfig;
+  onChange: (c: DayConfig) => void;
+  onClose: () => void;
+}) {
+  const [hoursHoliday, setHoursHoliday] = useState(String(config.hoursHoliday));
+  const [hoursPre, setHoursPre] = useState(String(config.hoursPre));
+  const [hoursWork, setHoursWork] = useState(String(config.hoursWork));
+  const [dateExceptions, setDateExceptions] = useState<DateException[]>(config.dateExceptions);
+  const [weekdayExceptions, setWeekdayExceptions] = useState<WeekdayException[]>(
+    config.weekdayExceptions,
+  );
+
+  function save() {
+    const next: DayConfig = {
+      hoursHoliday: parseFloat(hoursHoliday) || 0,
+      hoursPre: parseFloat(hoursPre) || 0,
+      hoursWork: parseFloat(hoursWork) || 0,
+      dateExceptions: dateExceptions.filter((e) => e.date),
+      weekdayExceptions,
+    };
+    onChange(next);
+    onClose();
+  }
 
   return (
     <Sheet onClose={onClose}>
@@ -1473,7 +1530,7 @@ function DayConfigModal({ onClose }: { onClose: () => void }) {
             Impostazioni
           </p>
           <h3 className="font-display text-2xl font-semibold uppercase tracking-wide mt-1.5">
-            Configurazione Giorni
+            Capienze &amp; Eccezioni
           </h3>
         </div>
         <button onClick={onClose} className="p-1.5 rounded-full hover:bg-secondary">
@@ -1481,38 +1538,11 @@ function DayConfigModal({ onClose }: { onClose: () => void }) {
         </button>
       </div>
 
-      <div className="space-y-5">
-        <div>
+      <div className="space-y-6">
+        {/* Sezione 1: Capienze Base */}
+        <section>
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">
-            Giorni festivi
-          </p>
-          <div className="grid grid-cols-7 gap-1.5">
-            {dows.map((d, i) => (
-              <label
-                key={i}
-                className={`flex flex-col items-center gap-1.5 rounded-lg border p-2 cursor-pointer transition ${
-                  holidays[i]
-                    ? "border-foreground bg-secondary"
-                    : "border-border hover:bg-secondary/50"
-                }`}
-              >
-                <span className="text-[10px] uppercase tracking-wide">{d}</span>
-                <input
-                  type="checkbox"
-                  checked={holidays[i]}
-                  onChange={(e) =>
-                    setHolidays((prev) => prev.map((v, j) => (j === i ? e.target.checked : v)))
-                  }
-                  className="accent-foreground"
-                />
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">
-            Ore standard
+            Capienze base
           </p>
           <div className="grid grid-cols-3 gap-2">
             {[
@@ -1528,42 +1558,49 @@ function DayConfigModal({ onClose }: { onClose: () => void }) {
                   step={0.5}
                   inputMode="decimal"
                   value={f.v}
-                  onChange={(e) => f.s(e.target.value)}
+                  onChange={(e) => f.s(e.target.value.replace(/^0+(?=\d)/, ""))}
                   className="w-full mt-1 rounded-lg border border-input bg-background px-3 py-2 text-sm tabular-nums"
                 />
               </div>
             ))}
           </div>
-        </div>
+          <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
+            Priorità di calcolo: Festivo/Prefestivo → Data specifica → Giorno della settimana →
+            Feriale standard.
+          </p>
+        </section>
 
-        <div>
+        {/* Sezione 2a: Eccezioni su data specifica */}
+        <section>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Eccezioni</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Eccezioni · Date
+            </p>
             <button
               onClick={() =>
-                setExceptions((prev) => [
+                setDateExceptions((prev) => [
                   ...prev,
-                  { id: crypto.randomUUID(), date: "", label: "" },
+                  { id: crypto.randomUUID(), date: "", label: "", hours: 5 },
                 ])
               }
               className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-[11px] uppercase tracking-wide hover:bg-secondary"
             >
-              <Plus className="w-3 h-3" /> Aggiungi Data
+              <Plus className="w-3 h-3" /> Aggiungi
             </button>
           </div>
           <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
-            {exceptions.length === 0 ? (
+            {dateExceptions.length === 0 ? (
               <p className="text-xs text-muted-foreground p-4 text-center">
-                Nessuna eccezione.
+                Nessuna eccezione su data specifica.
               </p>
             ) : (
-              exceptions.map((ex) => (
-                <div key={ex.id} className="flex items-center gap-2 p-2.5">
+              dateExceptions.map((ex) => (
+                <div key={ex.id} className="flex flex-wrap items-center gap-2 p-2.5">
                   <input
                     type="date"
                     value={ex.date}
                     onChange={(e) =>
-                      setExceptions((prev) =>
+                      setDateExceptions((prev) =>
                         prev.map((x) => (x.id === ex.id ? { ...x, date: e.target.value } : x)),
                       )
                     }
@@ -1574,15 +1611,32 @@ function DayConfigModal({ onClose }: { onClose: () => void }) {
                     placeholder="Descrizione"
                     value={ex.label}
                     onChange={(e) =>
-                      setExceptions((prev) =>
+                      setDateExceptions((prev) =>
                         prev.map((x) => (x.id === ex.id ? { ...x, label: e.target.value } : x)),
                       )
                     }
-                    className="flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-xs"
+                    className="flex-1 min-w-[100px] rounded-md border border-input bg-background px-2 py-1.5 text-xs"
                   />
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    inputMode="decimal"
+                    value={ex.hours}
+                    onChange={(e) =>
+                      setDateExceptions((prev) =>
+                        prev.map((x) =>
+                          x.id === ex.id ? { ...x, hours: parseFloat(e.target.value) || 0 } : x,
+                        ),
+                      )
+                    }
+                    className="w-16 rounded-md border border-input bg-background px-2 py-1.5 text-xs tabular-nums"
+                    aria-label="Ore"
+                  />
+                  <span className="text-[11px] text-muted-foreground">h</span>
                   <button
                     onClick={() =>
-                      setExceptions((prev) => prev.filter((x) => x.id !== ex.id))
+                      setDateExceptions((prev) => prev.filter((x) => x.id !== ex.id))
                     }
                     className="p-1.5 rounded hover:bg-secondary text-muted-foreground"
                     aria-label="Rimuovi eccezione"
@@ -1593,6 +1647,98 @@ function DayConfigModal({ onClose }: { onClose: () => void }) {
               ))
             )}
           </div>
+        </section>
+
+        {/* Sezione 2b: Eccezioni ricorrenti per giorno della settimana */}
+        <section>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Eccezioni · Giorno settimana
+            </p>
+            <button
+              onClick={() =>
+                setWeekdayExceptions((prev) => [
+                  ...prev,
+                  { id: crypto.randomUUID(), dow: 5, hours: 7 },
+                ])
+              }
+              className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-[11px] uppercase tracking-wide hover:bg-secondary"
+            >
+              <Plus className="w-3 h-3" /> Aggiungi
+            </button>
+          </div>
+          <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
+            {weekdayExceptions.length === 0 ? (
+              <p className="text-xs text-muted-foreground p-4 text-center">
+                Nessuna eccezione ricorrente.
+              </p>
+            ) : (
+              weekdayExceptions.map((ex) => (
+                <div key={ex.id} className="flex flex-wrap items-center gap-2 p-2.5">
+                  <select
+                    value={ex.dow}
+                    onChange={(e) =>
+                      setWeekdayExceptions((prev) =>
+                        prev.map((x) =>
+                          x.id === ex.id ? { ...x, dow: parseInt(e.target.value, 10) } : x,
+                        ),
+                      )
+                    }
+                    className="rounded-md border border-input bg-background px-2 py-1.5 text-xs"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 0].map((d) => (
+                      <option key={d} value={d}>
+                        {DOW_LONG[d]}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-[11px] text-muted-foreground">solo feriali</span>
+                  <div className="flex-1" />
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    inputMode="decimal"
+                    value={ex.hours}
+                    onChange={(e) =>
+                      setWeekdayExceptions((prev) =>
+                        prev.map((x) =>
+                          x.id === ex.id ? { ...x, hours: parseFloat(e.target.value) || 0 } : x,
+                        ),
+                      )
+                    }
+                    className="w-16 rounded-md border border-input bg-background px-2 py-1.5 text-xs tabular-nums"
+                    aria-label="Ore"
+                  />
+                  <span className="text-[11px] text-muted-foreground">h</span>
+                  <button
+                    onClick={() =>
+                      setWeekdayExceptions((prev) => prev.filter((x) => x.id !== ex.id))
+                    }
+                    className="p-1.5 rounded hover:bg-secondary text-muted-foreground"
+                    aria-label="Rimuovi eccezione"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-lg border border-border py-2.5 text-sm hover:bg-secondary"
+          >
+            Annulla
+          </button>
+          <button
+            onClick={save}
+            className="flex-1 bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-medium hover:opacity-90"
+          >
+            Salva
+          </button>
         </div>
       </div>
     </Sheet>

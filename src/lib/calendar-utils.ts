@@ -22,6 +22,37 @@ export interface DayEntry {
 // dayKey format: YYYY-MM-DD
 export type EntriesMap = Record<string, DayEntry[]>;
 
+// --- Day configuration (base capacities + user exceptions) ---
+export interface DateException {
+  id: string;
+  date: string; // YYYY-MM-DD
+  label: string;
+  hours: number;
+}
+export interface WeekdayException {
+  id: string;
+  dow: number; // 0=Sun..6=Sat (matches Date.getDay())
+  hours: number;
+  label?: string;
+}
+export interface DayConfig {
+  hoursHoliday: number; // festivi (default 0)
+  hoursPre: number; // prefestivi (default 5)
+  hoursWork: number; // feriali standard (default 7.5)
+  dateExceptions: DateException[];
+  weekdayExceptions: WeekdayException[];
+}
+
+export const DEFAULT_DAY_CONFIG: DayConfig = {
+  hoursHoliday: 0,
+  hoursPre: 5,
+  hoursWork: 7.5,
+  dateExceptions: [],
+  weekdayExceptions: [
+    { id: "default-friday", dow: 5, hours: 7, label: "Venerdì" },
+  ],
+};
+
 // --- Italian holidays ---
 function easterSunday(year: number): Date {
   const a = year % 19;
@@ -63,11 +94,9 @@ export function getItalianHolidays(year: number): Set<string> {
   return s;
 }
 
-const SPECIAL_PREHOLIDAYS: Array<[number, number]> = [
-  [7, 2],
+// Solo prefestivi ufficiali: vigilia di Ferragosto, vigilia di Natale, San Silvestro.
+const PREHOLIDAYS: Array<[number, number]> = [
   [8, 14],
-  [8, 16],
-  [12, 1],
   [12, 24],
   [12, 31],
 ];
@@ -81,23 +110,48 @@ export function keyFromDate(d: Date) {
 
 export type DayType = "holiday" | "special" | "friday" | "weekday";
 
-export function getDayInfo(date: Date, holidays: Set<string>) {
-  const key = keyFromDate(date);
-  if (holidays.has(key)) {
-    // Sundays also 0 capacity
-    return { type: "holiday" as DayType, capacity: 0, key };
-  }
-  const dow = date.getDay(); // 0 Sun 6 Sat
-  if (dow === 0) return { type: "holiday" as DayType, capacity: 0, key };
+export interface DayInfo {
+  type: DayType;
+  capacity: number;
+  key: string;
+  note?: string;
+}
 
+export function getDayInfo(
+  date: Date,
+  holidays: Set<string>,
+  config: DayConfig = DEFAULT_DAY_CONFIG,
+): DayInfo {
+  const key = keyFromDate(date);
+  const dow = date.getDay(); // 0 Sun..6 Sat
   const m = date.getMonth() + 1;
   const d = date.getDate();
-  const isSpecial = SPECIAL_PREHOLIDAYS.some(([sm, sd]) => sm === m && sd === d);
-  if (isSpecial) return { type: "special" as DayType, capacity: 5, key };
 
-  if (dow === 6) return { type: "holiday" as DayType, capacity: 0, key }; // Saturday treat as holiday? spec doesn't say. Let's treat as weekend holiday visual? Spec says holidays = 0. Sabato non è festivo. Treat as weekday 7.5? Standard italiano: sabato non lavorativo. Ambiguo. Let's treat sabato as holiday (0h).
-  if (dow === 5) return { type: "friday" as DayType, capacity: 7, key };
-  return { type: "weekday" as DayType, capacity: 7.5, key };
+  // Priorità 1a — Festivi (domenica, sabato, festività nazionali)
+  if (holidays.has(key) || dow === 0 || dow === 6) {
+    return { type: "holiday", capacity: config.hoursHoliday, key };
+  }
+  // Priorità 1b — Prefestivi ufficiali
+  if (PREHOLIDAYS.some(([sm, sd]) => sm === m && sd === d)) {
+    return { type: "special", capacity: config.hoursPre, key };
+  }
+  // Priorità 2 — Eccezione su data specifica (solo feriali)
+  const de = config.dateExceptions.find((x) => x.date === key);
+  if (de) {
+    return { type: "weekday", capacity: de.hours, key, note: de.label || undefined };
+  }
+  // Priorità 3 — Eccezione ricorrente per giorno della settimana (solo feriali)
+  const we = config.weekdayExceptions.find((x) => x.dow === dow);
+  if (we) {
+    return {
+      type: dow === 5 ? "friday" : "weekday",
+      capacity: we.hours,
+      key,
+      note: we.label,
+    };
+  }
+  // Priorità 4 — Feriale standard
+  return { type: "weekday", capacity: config.hoursWork, key };
 }
 
 export function monthMatrix(year: number, month0: number): Date[] {
