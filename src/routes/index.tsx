@@ -117,7 +117,7 @@ function Index() {
     let empty = 0;
     for (const d of days) {
       if (d.getMonth() !== month) continue;
-      const info = getDayInfo(d, holidays);
+      const info = getDayInfo(d, holidays, dayConfig);
       if (info.capacity === 0) continue;
       total++;
       const list = entries[info.key] ?? [];
