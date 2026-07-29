@@ -219,6 +219,7 @@ function Index() {
                     const data = JSON.parse(await f.text());
                     if (Array.isArray(data.categories)) setCategories(data.categories);
                     if (data.entries && typeof data.entries === "object") setEntries(data.entries);
+                    if (data.dayConfig && typeof data.dayConfig === "object") setDayConfig(data.dayConfig);
                   } catch {
                     alert("File non valido");
                   }
