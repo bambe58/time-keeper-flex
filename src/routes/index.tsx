@@ -1223,7 +1223,7 @@ function BulkAssignModal({
 
     for (const k of selectedKeys) {
       const d = dateFromKey(k);
-      const info = getDayInfo(d, holidays);
+      const info = getDayInfo(d, holidays, dayConfig);
       const existing = entries[k] ?? [];
       if (info.capacity === 0)
         return setError(`Errore: ${k} è un giorno non lavorativo`);
@@ -1251,7 +1251,7 @@ function BulkAssignModal({
     const next: EntriesMap = { ...entries };
     for (const k of selectedKeys) {
       const d = dateFromKey(k);
-      const info = getDayInfo(d, holidays);
+      const info = getDayInfo(d, holidays, dayConfig);
       const need = chosenKind === "daily" ? info.capacity : hoursPerDay;
       const entry: DayEntry = {
         id: crypto.randomUUID(),
