@@ -23,15 +23,21 @@ import {
   keyFromDate,
   monthMatrix,
   remainingBudget,
+  DEFAULT_DAY_CONFIG,
   type Category,
   type EntriesMap,
   type DayEntry,
+  type DayConfig,
+  type DateException,
+  type WeekdayException,
 } from "@/lib/calendar-utils";
 import {
   loadCategories,
   saveCategories,
   loadEntries,
   saveEntries,
+  loadDayConfig,
+  saveDayConfig,
   PALETTE,
 } from "@/lib/storage";
 
