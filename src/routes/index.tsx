@@ -325,6 +325,7 @@ function Index() {
                   date={d}
                   currentMonth={month}
                   holidays={holidays}
+                  dayConfig={dayConfig}
                   entries={entries[k] ?? []}
                   categories={categories}
                   selectionMode={selectionMode}
