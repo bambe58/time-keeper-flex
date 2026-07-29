@@ -399,6 +399,7 @@ function Index() {
         <DayModal
           date={openDay}
           holidays={holidays}
+          dayConfig={dayConfig}
           categories={categories}
           entries={entries}
           onClose={() => setOpenDay(null)}
