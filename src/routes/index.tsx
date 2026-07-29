@@ -1168,6 +1168,7 @@ function BulkAssignModal({
   entries,
   selectedKeys,
   holidays,
+  dayConfig,
   year,
   month0,
   onClose,
@@ -1177,6 +1178,7 @@ function BulkAssignModal({
   entries: EntriesMap;
   selectedKeys: string[];
   holidays: Set<string>;
+  dayConfig: DayConfig;
   year: number;
   month0: number;
   onClose: () => void;
