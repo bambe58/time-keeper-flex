@@ -614,6 +614,7 @@ function BudgetFooter({
 function DayModal({
   date,
   holidays,
+  dayConfig,
   categories,
   entries,
   onClose,
@@ -621,12 +622,13 @@ function DayModal({
 }: {
   date: Date;
   holidays: Set<string>;
+  dayConfig: DayConfig;
   categories: Category[];
   entries: EntriesMap;
   onClose: () => void;
   onChange: (e: EntriesMap) => void;
 }) {
-  const info = getDayInfo(date, holidays);
+  const info = getDayInfo(date, holidays, dayConfig);
   const key = info.key;
   const dayEntries = entries[key] ?? [];
   const used = dayEntries.reduce((s, e) => s + e.hours, 0);
