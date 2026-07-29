@@ -330,7 +330,7 @@ function Index() {
                   selectionMode={selectionMode}
                   selected={selectedKeys.has(k)}
                   onActivate={() => {
-                    const info = getDayInfo(d, holidays);
+                    const info = getDayInfo(d, holidays, dayConfig);
                     if (info.capacity === 0) return;
                     if (d.getMonth() !== month) return;
                     if (selectionMode) {
