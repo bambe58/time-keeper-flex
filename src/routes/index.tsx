@@ -711,6 +711,11 @@ function DayModal({
           <p className="text-xs text-muted-foreground mt-1 tabular-nums">
             Capienza {info.capacity}h — occupate {used}h — residue {Math.max(0, remaining)}h
           </p>
+          {info.note && (
+            <p className="text-[11px] italic text-muted-foreground/80 mt-0.5 normal-case">
+              {info.note}
+            </p>
+          )}
         </div>
         <button onClick={onClose} className="p-1.5 rounded-full hover:bg-secondary">
           <X className="w-4 h-4" />
