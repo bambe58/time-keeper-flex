@@ -16,6 +16,7 @@ import {
   BookOpen,
   CalendarCog,
   Tags,
+  UserCircle2,
 } from "lucide-react";
 import {
   getItalianHolidays,
@@ -40,6 +41,9 @@ import {
   saveDayConfig,
   PALETTE,
 } from "@/lib/storage";
+
+import { useAuth } from "@/hooks/useAuth";
+import { LoginScreen, OnboardingModal, ProfileModal } from "@/components/auth-ui";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -85,6 +89,8 @@ function Index() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [showBulk, setShowBulk] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const { user, profile, loading: authLoading, saveUsername, signOut } = useAuth();
 
 
   useEffect(() => {
@@ -106,6 +112,8 @@ function Index() {
     if (!hydrated) return;
     saveDayConfig(dayConfig);
   }, [dayConfig, hydrated]);
+
+  const needsOnboarding = !!user && !!profile && !profile.username?.trim();
 
   const holidays = useMemo(() => getItalianHolidays(year), [year]);
   const days = useMemo(() => monthMatrix(year, month), [year, month]);
@@ -431,9 +439,31 @@ function Index() {
           }}
         />
       )}
+      {needsOnboarding && (
+        <OnboardingModal
+          defaultName={(user?.user_metadata?.full_name as string) ?? ""}
+          onSave={async (n) => (await saveUsername(n)).error}
+        />
+      )}
+      {showProfile && (
+        <ProfileModal
+          email={user?.email ?? ""}
+          username={profile?.username ?? ""}
+          onSave={async (n) => (await saveUsername(n)).error}
+          onSignOut={async () => {
+            setShowProfile(false);
+            await signOut();
+          }}
+          onClose={() => setShowProfile(false)}
+        />
+      )}
       {showSettings && (
         <SettingsMenu
           onClose={() => setShowSettings(false)}
+          onOpenProfile={() => {
+            setShowSettings(false);
+            setShowProfile(true);
+          }}
           onOpenCategories={() => {
             setShowSettings(false);
             setShowCats(true);
@@ -1365,16 +1395,19 @@ function BulkAssignModal({
 // -------------- Settings Menu --------------
 function SettingsMenu({
   onClose,
+  onOpenProfile,
   onOpenCategories,
   onOpenGuide,
   onOpenDayConfig,
 }: {
   onClose: () => void;
+  onOpenProfile: () => void;
   onOpenCategories: () => void;
   onOpenGuide: () => void;
   onOpenDayConfig: () => void;
 }) {
   const items = [
+    { label: "Profilo", icon: UserCircle2, onClick: onOpenProfile },
     { label: "Gestione Categorie", icon: Tags, onClick: onOpenCategories },
     { label: "Guida Utilizzo", icon: BookOpen, onClick: onOpenGuide },
     { label: "Configurazione Giorni", icon: CalendarCog, onClick: onOpenDayConfig },
