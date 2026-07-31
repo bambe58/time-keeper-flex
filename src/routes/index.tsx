@@ -180,6 +180,14 @@ function Index() {
         ? "bg-red-500"
         : "bg-amber-400";
 
+  if (!hydrated || authLoading) {
+    return <main className="min-h-screen bg-background" />;
+  }
+
+  if (!user) {
+    return <LoginScreen />;
+  }
+
   return (
     <main className="min-h-screen pb-24 no-tap-highlight">
       <header className="px-5 pt-8 pb-4 max-w-2xl mx-auto">
