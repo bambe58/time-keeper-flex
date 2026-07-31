@@ -83,13 +83,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "Calendario personale minimale per gestire ferie, permessi, smart working e presenze in ufficio con budget mensili e annuali.",
       },
-      { property: "og:title", content: "Calendario personale" },
+      { property: "og:title", content: "Calendario — Ferie, permessi, smart working" },
       {
         property: "og:description",
-        content: "Gestisci ferie, permessi e smart working con un calendario elegante.",
+        content: "Calendario personale minimale per gestire ferie, permessi, smart working e presenze in ufficio con budget mensili e annuali.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Calendario — Ferie, permessi, smart working" },
+      { name: "twitter:description", content: "Calendario personale minimale per gestire ferie, permessi, smart working e presenze in ufficio con budget mensili e annuali." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/9c1e6270-ae3e-494a-aa13-fff057bef60f/id-preview-9c9b734b--7d999029-83db-4348-a0b0-ea41215c5a9b.lovable.app-1785476839292.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/9c1e6270-ae3e-494a-aa13-fff057bef60f/id-preview-9c9b734b--7d999029-83db-4348-a0b0-ea41215c5a9b.lovable.app-1785476839292.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
