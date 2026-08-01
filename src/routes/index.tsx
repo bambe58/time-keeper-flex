@@ -192,14 +192,36 @@ function Index() {
     <main className="min-h-screen pb-24 no-tap-highlight">
       <header className="px-5 pt-8 pb-4 max-w-2xl mx-auto">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              Il tuo tempo
-            </p>
-            <h1 className="font-display text-2xl font-semibold uppercase tracking-wide leading-none mt-1.5">
-              CALENDARIO
-            </h1>
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={() => setShowProfile(true)}
+              className="shrink-0 rounded-full border border-border overflow-hidden w-10 h-10 flex items-center justify-center bg-secondary hover:bg-muted transition"
+              aria-label="Profilo"
+              title="Profilo"
+            >
+              {profile?.avatar_url || (user?.user_metadata?.avatar_url as string) ? (
+                <img
+                  src={profile?.avatar_url ?? (user?.user_metadata?.avatar_url as string)}
+                  alt={profile?.username ?? "Avatar utente"}
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <span className="text-xs font-semibold uppercase">
+                  {(profile?.username ?? user?.email ?? "?").slice(0, 2)}
+                </span>
+              )}
+            </button>
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground truncate">
+                {profile?.username?.trim() || "Il tuo tempo"}
+              </p>
+              <h1 className="font-display text-2xl font-semibold uppercase tracking-wide leading-none mt-1.5">
+                CALENDARIO
+              </h1>
+            </div>
           </div>
+
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
