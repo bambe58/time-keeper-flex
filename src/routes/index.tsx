@@ -1455,22 +1455,26 @@ function BulkAssignModal({
 function SettingsMenu({
   onClose,
   onOpenProfile,
+  onOpenGroups,
   onOpenCategories,
   onOpenGuide,
   onOpenDayConfig,
 }: {
   onClose: () => void;
   onOpenProfile: () => void;
+  onOpenGroups: () => void;
   onOpenCategories: () => void;
   onOpenGuide: () => void;
   onOpenDayConfig: () => void;
 }) {
   const items = [
     { label: "Profilo", icon: UserCircle2, onClick: onOpenProfile },
+    { label: "Gruppi", icon: Users, onClick: onOpenGroups },
     { label: "Gestione Categorie", icon: Tags, onClick: onOpenCategories },
     { label: "Guida Utilizzo", icon: BookOpen, onClick: onOpenGuide },
     { label: "Configurazione Giorni", icon: CalendarCog, onClick: onOpenDayConfig },
   ];
+
   return (
     <Sheet onClose={onClose}>
       <div className="flex items-start justify-between mb-4">
