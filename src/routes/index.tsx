@@ -17,7 +17,9 @@ import {
   CalendarCog,
   Tags,
   UserCircle2,
+  Users,
 } from "lucide-react";
+
 import {
   getItalianHolidays,
   getDayInfo,
@@ -44,6 +46,8 @@ import {
 
 import { useAuth } from "@/hooks/useAuth";
 import { LoginScreen, OnboardingModal, ProfileModal } from "@/components/auth-ui";
+import { GroupsModal } from "@/components/groups-ui";
+
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -90,7 +94,16 @@ function Index() {
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [showBulk, setShowBulk] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const { user, profile, loading: authLoading, saveUsername, signOut } = useAuth();
+  const [showGroups, setShowGroups] = useState(false);
+  const {
+    user,
+    profile,
+    loading: authLoading,
+    saveUsername,
+    signOut,
+    refreshProfile,
+  } = useAuth();
+
 
 
   useEffect(() => {
