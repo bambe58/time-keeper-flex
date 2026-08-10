@@ -17,7 +17,9 @@ import {
   CalendarCog,
   Tags,
   UserCircle2,
+  Users,
 } from "lucide-react";
+
 import {
   getItalianHolidays,
   getDayInfo,
@@ -44,6 +46,8 @@ import {
 
 import { useAuth } from "@/hooks/useAuth";
 import { LoginScreen, OnboardingModal, ProfileModal } from "@/components/auth-ui";
+import { GroupsModal } from "@/components/groups-ui";
+
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -90,7 +94,16 @@ function Index() {
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [showBulk, setShowBulk] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const { user, profile, loading: authLoading, saveUsername, signOut } = useAuth();
+  const [showGroups, setShowGroups] = useState(false);
+  const {
+    user,
+    profile,
+    loading: authLoading,
+    saveUsername,
+    signOut,
+    refreshProfile,
+  } = useAuth();
+
 
 
   useEffect(() => {
@@ -494,6 +507,11 @@ function Index() {
             setShowSettings(false);
             setShowProfile(true);
           }}
+          onOpenGroups={() => {
+            setShowSettings(false);
+            setShowGroups(true);
+          }}
+
           onOpenCategories={() => {
             setShowSettings(false);
             setShowCats(true);
@@ -508,7 +526,18 @@ function Index() {
           }}
         />
       )}
+      {showGroups && (
+        <GroupsModal
+          userId={user?.id ?? null}
+          groupId={profile?.group_id ?? null}
+          username={profile?.username ?? ""}
+          onSaveUsername={async (n) => (await saveUsername(n)).error}
+          onProfileChanged={() => void refreshProfile()}
+          onClose={() => setShowGroups(false)}
+        />
+      )}
       {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
+
       {showDayConfig && (
         <DayConfigModal
           config={dayConfig}
@@ -1426,22 +1455,26 @@ function BulkAssignModal({
 function SettingsMenu({
   onClose,
   onOpenProfile,
+  onOpenGroups,
   onOpenCategories,
   onOpenGuide,
   onOpenDayConfig,
 }: {
   onClose: () => void;
   onOpenProfile: () => void;
+  onOpenGroups: () => void;
   onOpenCategories: () => void;
   onOpenGuide: () => void;
   onOpenDayConfig: () => void;
 }) {
   const items = [
     { label: "Profilo", icon: UserCircle2, onClick: onOpenProfile },
+    { label: "Gruppi", icon: Users, onClick: onOpenGroups },
     { label: "Gestione Categorie", icon: Tags, onClick: onOpenCategories },
     { label: "Guida Utilizzo", icon: BookOpen, onClick: onOpenGuide },
     { label: "Configurazione Giorni", icon: CalendarCog, onClick: onOpenDayConfig },
   ];
+
   return (
     <Sheet onClose={onClose}>
       <div className="flex items-start justify-between mb-4">

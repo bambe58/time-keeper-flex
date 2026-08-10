@@ -6,6 +6,7 @@ export type Profile = {
   id: string;
   username: string | null;
   avatar_url: string | null;
+  group_id: string | null;
 };
 
 export function useAuth() {
@@ -16,11 +17,14 @@ export function useAuth() {
   const fetchProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
-      .select("id, username, avatar_url")
+      .select("id, username, avatar_url, group_id")
       .eq("id", userId)
       .maybeSingle();
-    setProfile((data as Profile) ?? { id: userId, username: null, avatar_url: null });
+    setProfile(
+      (data as Profile) ?? { id: userId, username: null, avatar_url: null, group_id: null },
+    );
   }, []);
+
 
   useEffect(() => {
     let active = true;
@@ -70,5 +74,18 @@ export function useAuth() {
     setProfile(null);
   }, []);
 
-  return { session, user: session?.user ?? null, profile, loading, saveUsername, signOut };
+  const refreshProfile = useCallback(async () => {
+    if (session?.user) await fetchProfile(session.user.id);
+  }, [session, fetchProfile]);
+
+  return {
+    session,
+    user: session?.user ?? null,
+    profile,
+    loading,
+    saveUsername,
+    signOut,
+    refreshProfile,
+  };
+
 }
