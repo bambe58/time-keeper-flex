@@ -333,6 +333,33 @@ function Index() {
       </header>
 
       <section className="max-w-2xl mx-auto px-5">
+        <div className="mb-4 rounded-full border border-border bg-card p-1 flex">
+          {(
+            [
+              ["mine", "Il mio Calendario"],
+              ["group", "Vista Gruppo"],
+            ] as const
+          ).map(([mode, label]) => (
+            <button
+              key={mode}
+              onClick={() => {
+                setViewMode(mode);
+                setSelectionMode(false);
+                setSelectedKeys(new Set());
+                setOpenDay(null);
+              }}
+              className={`flex-1 rounded-full py-2 text-[10px] uppercase tracking-[0.16em] transition ${
+                viewMode === mode
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+
         <div className="flex items-center justify-between mb-3">
           <button
             onClick={prevMonth}
