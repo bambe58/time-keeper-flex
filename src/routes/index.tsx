@@ -94,7 +94,9 @@ function Index() {
   const [openDay, setOpenDay] = useState<Date | null>(null);
   const [editingYear, setEditingYear] = useState(false);
   const [yearInput, setYearInput] = useState("");
+  const [viewMode, setViewMode] = useState<"mine" | "group">("mine");
   const [selectionMode, setSelectionMode] = useState(false);
+
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [showBulk, setShowBulk] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
