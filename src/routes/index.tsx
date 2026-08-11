@@ -591,6 +591,8 @@ function DayCell({
   selected,
   onActivate,
   onLongPress,
+  readOnly = false,
+  groupItems,
 }: {
   date: Date;
   currentMonth: number;
@@ -602,13 +604,15 @@ function DayCell({
   selected: boolean;
   onActivate: () => void;
   onLongPress: () => void;
+  readOnly?: boolean;
+  groupItems?: GroupDayItem[];
 }) {
   const info = getDayInfo(date, holidays, dayConfig);
   const inMonth = date.getMonth() === currentMonth;
   const used = entries.reduce((s, e) => s + e.hours, 0);
   const remaining = Math.max(0, info.capacity - used);
   const full = info.capacity > 0 && remaining <= 0.001;
-  const disabled = info.capacity === 0 || !inMonth;
+  const disabled = readOnly || info.capacity === 0 || !inMonth;
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longFired = useRef(false);
@@ -638,6 +642,11 @@ function DayCell({
         ? "text-special"
         : "text-foreground";
 
+  const items = groupItems ?? [];
+  const groupTitle = readOnly
+    ? items.map((i) => `${i.username} · ${i.categoryName}${i.kind === "hourly" ? ` ${i.hours}h` : ""}`).join("\n")
+    : undefined;
+
   return (
     <button
       onClick={click}
@@ -647,7 +656,7 @@ function DayCell({
       onPointerCancel={cancel}
       onContextMenu={(e) => e.preventDefault()}
       disabled={disabled}
-      title={info.note}
+      title={readOnly ? groupTitle || info.note : info.note}
       className={`relative min-h-[3.5rem] sm:min-h-[4.25rem] rounded-lg text-left p-1.5 sm:p-2.5 flex flex-col overflow-hidden transition select-none ${
         inMonth ? "bg-background hover:bg-secondary/70" : "bg-transparent opacity-40"
       } ${disabled ? "cursor-default" : "cursor-pointer"} ${
@@ -656,7 +665,7 @@ function DayCell({
     >
       <div className="flex items-start justify-between">
         <span className={`text-sm font-medium tabular-nums ${numColor}`}>{date.getDate()}</span>
-        {info.capacity > 0 && (
+        {!readOnly && info.capacity > 0 && (
           <span
             className={`text-[9px] tabular-nums leading-none ${
               full ? "text-foreground font-bold" : "text-muted-foreground/60"
@@ -665,29 +674,54 @@ function DayCell({
             {used}/{info.capacity}
           </span>
         )}
-      </div>
-      <div className="flex flex-col gap-0.5 mt-auto">
-        {entries.slice(0, 3).map((e) => {
-          const cat = categories.find((c) => c.id === e.categoryId);
-          if (!cat) return null;
-          return (
-            <span
-              key={e.id}
-              className="text-[9px] font-semibold rounded px-1 py-[1px] text-white truncate"
-              style={{ backgroundColor: cat.color }}
-            >
-              {cat.symbol}
-              {e.kind === "hourly" ? ` ${e.hours}h` : ""}
-            </span>
-          );
-        })}
-        {entries.length > 3 && (
-          <span className="text-[8px] text-muted-foreground">+{entries.length - 3}</span>
+        {readOnly && items.length > 0 && (
+          <span className="text-[9px] tabular-nums leading-none text-muted-foreground/60">
+            {items.length}
+          </span>
         )}
       </div>
+
+      {readOnly ? (
+        <div className="flex flex-col gap-0.5 mt-auto">
+          {items.slice(0, 3).map((i) => (
+            <span
+              key={i.id}
+              className="flex items-center gap-1 text-[9px] font-semibold rounded px-1 py-[1px] text-white overflow-hidden"
+              style={{ backgroundColor: i.color }}
+            >
+              <span className="shrink-0 bg-black/25 rounded px-[3px] leading-[1.4]">{i.symbol}</span>
+              <span className="truncate">{i.username}</span>
+            </span>
+          ))}
+          {items.length > 3 && (
+            <span className="text-[8px] text-muted-foreground">+{items.length - 3}</span>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-0.5 mt-auto">
+          {entries.slice(0, 3).map((e) => {
+            const cat = categories.find((c) => c.id === e.categoryId);
+            if (!cat) return null;
+            return (
+              <span
+                key={e.id}
+                className="text-[9px] font-semibold rounded px-1 py-[1px] text-white truncate"
+                style={{ backgroundColor: cat.color }}
+              >
+                {cat.symbol}
+                {e.kind === "hourly" ? ` ${e.hours}h` : ""}
+              </span>
+            );
+          })}
+          {entries.length > 3 && (
+            <span className="text-[8px] text-muted-foreground">+{entries.length - 3}</span>
+          )}
+        </div>
+      )}
     </button>
   );
 }
+
 
 
 function BudgetFooter({
