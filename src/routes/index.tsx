@@ -45,6 +45,8 @@ import {
 } from "@/lib/storage";
 
 import { useAuth } from "@/hooks/useAuth";
+import { useCloudSync } from "@/hooks/useCloudSync";
+
 import { LoginScreen, OnboardingModal, ProfileModal } from "@/components/auth-ui";
 import { GroupsModal } from "@/components/groups-ui";
 
