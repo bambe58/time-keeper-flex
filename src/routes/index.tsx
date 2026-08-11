@@ -46,6 +46,8 @@ import {
 
 import { useAuth } from "@/hooks/useAuth";
 import { useCloudSync } from "@/hooks/useCloudSync";
+import { useGroupEntries, type GroupDayItem } from "@/hooks/useGroupEntries";
+
 
 import { LoginScreen, OnboardingModal, ProfileModal } from "@/components/auth-ui";
 import { GroupsModal } from "@/components/groups-ui";
@@ -92,7 +94,9 @@ function Index() {
   const [openDay, setOpenDay] = useState<Date | null>(null);
   const [editingYear, setEditingYear] = useState(false);
   const [yearInput, setYearInput] = useState("");
+  const [viewMode, setViewMode] = useState<"mine" | "group">("mine");
   const [selectionMode, setSelectionMode] = useState(false);
+
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [showBulk, setShowBulk] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -138,7 +142,15 @@ function Index() {
     setDayConfig,
   });
 
+  const groupView = useGroupEntries(
+    profile?.group_id ?? null,
+    year,
+    month,
+    viewMode === "group",
+  );
+
   const needsOnboarding = !!user && !!profile && !profile.username?.trim();
+
 
 
   const holidays = useMemo(() => getItalianHolidays(year), [year]);
@@ -321,6 +333,33 @@ function Index() {
       </header>
 
       <section className="max-w-2xl mx-auto px-5">
+        <div className="mb-4 rounded-full border border-border bg-card p-1 flex">
+          {(
+            [
+              ["mine", "Il mio Calendario"],
+              ["group", "Vista Gruppo"],
+            ] as const
+          ).map(([mode, label]) => (
+            <button
+              key={mode}
+              onClick={() => {
+                setViewMode(mode);
+                setSelectionMode(false);
+                setSelectedKeys(new Set());
+                setOpenDay(null);
+              }}
+              className={`flex-1 rounded-full py-2 text-[10px] uppercase tracking-[0.16em] transition ${
+                viewMode === mode
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+
         <div className="flex items-center justify-between mb-3">
           <button
             onClick={prevMonth}
@@ -409,9 +448,12 @@ function Index() {
                   dayConfig={dayConfig}
                   entries={entries[k] ?? []}
                   categories={categories}
+                  readOnly={viewMode === "group"}
+                  groupItems={groupView.groupEntries[k] ?? []}
                   selectionMode={selectionMode}
                   selected={selectedKeys.has(k)}
                   onActivate={() => {
+                    if (viewMode === "group") return;
                     const info = getDayInfo(d, holidays, dayConfig);
                     if (info.capacity === 0) return;
                     if (d.getMonth() !== month) return;
@@ -427,6 +469,7 @@ function Index() {
                     }
                   }}
                   onLongPress={() => {
+                    if (viewMode === "group") return;
                     const info = getDayInfo(d, holidays, dayConfig);
                     if (info.capacity === 0) return;
                     if (d.getMonth() !== month) return;
@@ -441,7 +484,7 @@ function Index() {
           </div>
         </div>
 
-        {selectionMode && (
+        {viewMode === "mine" && selectionMode && (
           <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 bg-card border border-border rounded-full shadow-lg pl-4 pr-2 py-2">
             <span className="text-xs uppercase tracking-widest text-muted-foreground tabular-nums">
               {selectedKeys.size} selezionat{selectedKeys.size === 1 ? "o" : "i"}
@@ -468,12 +511,45 @@ function Index() {
           </div>
         )}
 
-        <BudgetFooter
-          categories={categories}
-          entries={entries}
-          year={year}
-          month0={month}
-        />
+        {viewMode === "mine" ? (
+          <BudgetFooter
+            categories={categories}
+            entries={entries}
+            year={year}
+            month0={month}
+          />
+        ) : (
+          <div className="mt-5">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">
+              Gruppo · sola lettura
+            </p>
+            {!profile?.group_id ? (
+              <p className="text-sm text-muted-foreground">
+                Non fai parte di nessun gruppo. Vai in Impostazioni → Gruppi per crearne uno o
+                unirti con un codice.
+              </p>
+            ) : groupView.loading ? (
+              <p className="text-sm text-muted-foreground">Caricamento…</p>
+            ) : groupView.error ? (
+              <p className="text-sm text-red-500">{groupView.error}</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {groupView.members.map((m) => (
+                  <span
+                    key={m.id}
+                    className="text-xs rounded-md border border-border bg-card px-2 py-1"
+                  >
+                    {m.username}
+                  </span>
+                ))}
+                {groupView.members.length === 0 && (
+                  <span className="text-sm text-muted-foreground">Nessun membro.</span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
       </section>
 
       {openDay && (
@@ -591,6 +667,8 @@ function DayCell({
   selected,
   onActivate,
   onLongPress,
+  readOnly = false,
+  groupItems,
 }: {
   date: Date;
   currentMonth: number;
@@ -602,13 +680,15 @@ function DayCell({
   selected: boolean;
   onActivate: () => void;
   onLongPress: () => void;
+  readOnly?: boolean;
+  groupItems?: GroupDayItem[];
 }) {
   const info = getDayInfo(date, holidays, dayConfig);
   const inMonth = date.getMonth() === currentMonth;
   const used = entries.reduce((s, e) => s + e.hours, 0);
   const remaining = Math.max(0, info.capacity - used);
   const full = info.capacity > 0 && remaining <= 0.001;
-  const disabled = info.capacity === 0 || !inMonth;
+  const disabled = readOnly || info.capacity === 0 || !inMonth;
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longFired = useRef(false);
@@ -638,6 +718,11 @@ function DayCell({
         ? "text-special"
         : "text-foreground";
 
+  const items = groupItems ?? [];
+  const groupTitle = readOnly
+    ? items.map((i) => `${i.username} · ${i.categoryName}${i.kind === "hourly" ? ` ${i.hours}h` : ""}`).join("\n")
+    : undefined;
+
   return (
     <button
       onClick={click}
@@ -647,7 +732,7 @@ function DayCell({
       onPointerCancel={cancel}
       onContextMenu={(e) => e.preventDefault()}
       disabled={disabled}
-      title={info.note}
+      title={readOnly ? groupTitle || info.note : info.note}
       className={`relative min-h-[3.5rem] sm:min-h-[4.25rem] rounded-lg text-left p-1.5 sm:p-2.5 flex flex-col overflow-hidden transition select-none ${
         inMonth ? "bg-background hover:bg-secondary/70" : "bg-transparent opacity-40"
       } ${disabled ? "cursor-default" : "cursor-pointer"} ${
@@ -656,7 +741,7 @@ function DayCell({
     >
       <div className="flex items-start justify-between">
         <span className={`text-sm font-medium tabular-nums ${numColor}`}>{date.getDate()}</span>
-        {info.capacity > 0 && (
+        {!readOnly && info.capacity > 0 && (
           <span
             className={`text-[9px] tabular-nums leading-none ${
               full ? "text-foreground font-bold" : "text-muted-foreground/60"
@@ -665,29 +750,54 @@ function DayCell({
             {used}/{info.capacity}
           </span>
         )}
-      </div>
-      <div className="flex flex-col gap-0.5 mt-auto">
-        {entries.slice(0, 3).map((e) => {
-          const cat = categories.find((c) => c.id === e.categoryId);
-          if (!cat) return null;
-          return (
-            <span
-              key={e.id}
-              className="text-[9px] font-semibold rounded px-1 py-[1px] text-white truncate"
-              style={{ backgroundColor: cat.color }}
-            >
-              {cat.symbol}
-              {e.kind === "hourly" ? ` ${e.hours}h` : ""}
-            </span>
-          );
-        })}
-        {entries.length > 3 && (
-          <span className="text-[8px] text-muted-foreground">+{entries.length - 3}</span>
+        {readOnly && items.length > 0 && (
+          <span className="text-[9px] tabular-nums leading-none text-muted-foreground/60">
+            {items.length}
+          </span>
         )}
       </div>
+
+      {readOnly ? (
+        <div className="flex flex-col gap-0.5 mt-auto">
+          {items.slice(0, 3).map((i) => (
+            <span
+              key={i.id}
+              className="flex items-center gap-1 text-[9px] font-semibold rounded px-1 py-[1px] text-white overflow-hidden"
+              style={{ backgroundColor: i.color }}
+            >
+              <span className="shrink-0 bg-black/25 rounded px-[3px] leading-[1.4]">{i.symbol}</span>
+              <span className="truncate">{i.username}</span>
+            </span>
+          ))}
+          {items.length > 3 && (
+            <span className="text-[8px] text-muted-foreground">+{items.length - 3}</span>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-0.5 mt-auto">
+          {entries.slice(0, 3).map((e) => {
+            const cat = categories.find((c) => c.id === e.categoryId);
+            if (!cat) return null;
+            return (
+              <span
+                key={e.id}
+                className="text-[9px] font-semibold rounded px-1 py-[1px] text-white truncate"
+                style={{ backgroundColor: cat.color }}
+              >
+                {cat.symbol}
+                {e.kind === "hourly" ? ` ${e.hours}h` : ""}
+              </span>
+            );
+          })}
+          {entries.length > 3 && (
+            <span className="text-[8px] text-muted-foreground">+{entries.length - 3}</span>
+          )}
+        </div>
+      )}
     </button>
   );
 }
+
 
 
 function BudgetFooter({
