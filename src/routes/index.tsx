@@ -45,6 +45,8 @@ import {
 } from "@/lib/storage";
 
 import { useAuth } from "@/hooks/useAuth";
+import { useCloudSync } from "@/hooks/useCloudSync";
+
 import { LoginScreen, OnboardingModal, ProfileModal } from "@/components/auth-ui";
 import { GroupsModal } from "@/components/groups-ui";
 
@@ -126,7 +128,18 @@ function Index() {
     saveDayConfig(dayConfig);
   }, [dayConfig, hydrated]);
 
+  const sync = useCloudSync({
+    userId: user?.id ?? null,
+    entries,
+    categories,
+    dayConfig,
+    setEntries,
+    setCategories,
+    setDayConfig,
+  });
+
   const needsOnboarding = !!user && !!profile && !profile.username?.trim();
+
 
   const holidays = useMemo(() => getItalianHolidays(year), [year]);
   const days = useMemo(() => monthMatrix(year, month), [year, month]);
@@ -226,9 +239,26 @@ function Index() {
               )}
             </button>
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground truncate">
-                {profile?.username?.trim() || "Il tuo tempo"}
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground truncate flex items-center gap-1.5">
+                <span className="truncate">{profile?.username?.trim() || "Il tuo tempo"}</span>
+                <span
+                  className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${
+                    sync.status === "error"
+                      ? "bg-red-500"
+                      : sync.status === "synced"
+                        ? "bg-emerald-500"
+                        : "bg-amber-400"
+                  }`}
+                  title={
+                    sync.status === "error"
+                      ? `Sincronizzazione non riuscita: ${sync.error ?? ""}`
+                      : sync.status === "synced"
+                        ? "Sincronizzato con il cloud"
+                        : "Sincronizzazione in corso…"
+                  }
+                />
               </p>
+
               <h1 className="font-display text-2xl font-semibold uppercase tracking-wide leading-none mt-1.5">
                 CALENDARIO
               </h1>
