@@ -448,9 +448,12 @@ function Index() {
                   dayConfig={dayConfig}
                   entries={entries[k] ?? []}
                   categories={categories}
+                  readOnly={viewMode === "group"}
+                  groupItems={groupView.groupEntries[k] ?? []}
                   selectionMode={selectionMode}
                   selected={selectedKeys.has(k)}
                   onActivate={() => {
+                    if (viewMode === "group") return;
                     const info = getDayInfo(d, holidays, dayConfig);
                     if (info.capacity === 0) return;
                     if (d.getMonth() !== month) return;
@@ -466,6 +469,7 @@ function Index() {
                     }
                   }}
                   onLongPress={() => {
+                    if (viewMode === "group") return;
                     const info = getDayInfo(d, holidays, dayConfig);
                     if (info.capacity === 0) return;
                     if (d.getMonth() !== month) return;
@@ -480,7 +484,7 @@ function Index() {
           </div>
         </div>
 
-        {selectionMode && (
+        {viewMode === "mine" && selectionMode && (
           <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 bg-card border border-border rounded-full shadow-lg pl-4 pr-2 py-2">
             <span className="text-xs uppercase tracking-widest text-muted-foreground tabular-nums">
               {selectedKeys.size} selezionat{selectedKeys.size === 1 ? "o" : "i"}
@@ -507,12 +511,45 @@ function Index() {
           </div>
         )}
 
-        <BudgetFooter
-          categories={categories}
-          entries={entries}
-          year={year}
-          month0={month}
-        />
+        {viewMode === "mine" ? (
+          <BudgetFooter
+            categories={categories}
+            entries={entries}
+            year={year}
+            month0={month}
+          />
+        ) : (
+          <div className="mt-5">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">
+              Gruppo · sola lettura
+            </p>
+            {!profile?.group_id ? (
+              <p className="text-sm text-muted-foreground">
+                Non fai parte di nessun gruppo. Vai in Impostazioni → Gruppi per crearne uno o
+                unirti con un codice.
+              </p>
+            ) : groupView.loading ? (
+              <p className="text-sm text-muted-foreground">Caricamento…</p>
+            ) : groupView.error ? (
+              <p className="text-sm text-red-500">{groupView.error}</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {groupView.members.map((m) => (
+                  <span
+                    key={m.id}
+                    className="text-xs rounded-md border border-border bg-card px-2 py-1"
+                  >
+                    {m.username}
+                  </span>
+                ))}
+                {groupView.members.length === 0 && (
+                  <span className="text-sm text-muted-foreground">Nessun membro.</span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
       </section>
 
       {openDay && (
