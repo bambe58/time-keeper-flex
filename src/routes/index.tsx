@@ -46,6 +46,8 @@ import {
 
 import { useAuth } from "@/hooks/useAuth";
 import { useCloudSync } from "@/hooks/useCloudSync";
+import { useGroupEntries, type GroupDayItem } from "@/hooks/useGroupEntries";
+
 
 import { LoginScreen, OnboardingModal, ProfileModal } from "@/components/auth-ui";
 import { GroupsModal } from "@/components/groups-ui";
