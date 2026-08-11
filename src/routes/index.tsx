@@ -142,7 +142,15 @@ function Index() {
     setDayConfig,
   });
 
+  const groupView = useGroupEntries(
+    profile?.group_id ?? null,
+    year,
+    month,
+    viewMode === "group",
+  );
+
   const needsOnboarding = !!user && !!profile && !profile.username?.trim();
+
 
 
   const holidays = useMemo(() => getItalianHolidays(year), [year]);
