@@ -126,7 +126,18 @@ function Index() {
     saveDayConfig(dayConfig);
   }, [dayConfig, hydrated]);
 
+  const sync = useCloudSync({
+    userId: user?.id ?? null,
+    entries,
+    categories,
+    dayConfig,
+    setEntries,
+    setCategories,
+    setDayConfig,
+  });
+
   const needsOnboarding = !!user && !!profile && !profile.username?.trim();
+
 
   const holidays = useMemo(() => getItalianHolidays(year), [year]);
   const days = useMemo(() => monthMatrix(year, month), [year, month]);
