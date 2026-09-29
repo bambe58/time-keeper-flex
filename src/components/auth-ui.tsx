@@ -25,7 +25,7 @@ function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () =
 // Accesso a utente singolo: l'email è fissa, l'utente inserisce solo la password.
 const ACCESS_EMAIL = "firion888@gmail.com";
 
-export function LoginScreen() {
+export function LoginScreen({ onDone }: { onDone?: () => void } = {}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -54,6 +54,7 @@ export function LoginScreen() {
       setBusy(false);
       if (error) return setError("Impossibile impostare la password. Riprova.");
       setRecovery(false);
+      onDone?.();
       window.history.replaceState(null, "", window.location.pathname);
       return;
     }
