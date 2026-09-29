@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { LogOut, User, X } from "lucide-react";
-import { lovable } from "@/integrations/lovable";
+import { supabase } from "@/integrations/supabase/client";
 
 function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   useEffect(() => {
@@ -22,59 +22,106 @@ function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () =
   );
 }
 
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 48 48" className="w-4 h-4" aria-hidden="true">
-      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2.5 24 .5 14.6.5 6.5 5.9 2.6 13.8l7.8 6C12.3 14 17.7 9.5 24 9.5z" />
-      <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-2.8-.4-4.1H24v7.7h12.7c-.3 2.1-1.6 5.3-4.7 7.4l7.6 5.9c4.5-4.2 6.9-10.3 6.9-16.9z" />
-      <path fill="#FBBC05" d="M10.4 28.2a14.6 14.6 0 0 1 0-8.4l-7.8-6a24 24 0 0 0 0 20.4l7.8-6z" />
-      <path fill="#34A853" d="M24 47.5c6.2 0 11.5-2 15.3-5.6l-7.6-5.9c-2 1.4-4.8 2.4-7.7 2.4-6.3 0-11.7-4.5-13.6-10.2l-7.8 6C6.5 42.1 14.6 47.5 24 47.5z" />
-    </svg>
-  );
-}
+// Accesso a utente singolo: l'email è fissa, l'utente inserisce solo la password.
+const ACCESS_EMAIL = "firion888@gmail.com";
 
 export function LoginScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
+  const [show, setShow] = useState(false);
+  const [recovery, setRecovery] = useState(false);
 
-  async function signIn() {
-    setBusy(true);
-    setError(null);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+  useEffect(() => {
+    if (window.location.hash.includes("type=recovery")) setRecovery(true);
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setRecovery(true);
     });
-    if (result.error) {
-      setError("Accesso non riuscito. Riprova.");
-      setBusy(false);
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!password) {
+      setError("Inserisci la password");
       return;
     }
-    if (result.redirected) return;
+    setBusy(true);
+    if (recovery) {
+      const { error } = await supabase.auth.updateUser({ password });
+      setBusy(false);
+      if (error) return setError("Impossibile impostare la password. Riprova.");
+      setRecovery(false);
+      window.history.replaceState(null, "", window.location.pathname);
+      return;
+    }
+    const { error } = await supabase.auth.signInWithPassword({ email: ACCESS_EMAIL, password });
     setBusy(false);
+    if (error) setError("Password non valida");
+  }
+
+  async function sendReset() {
+    setError(null);
+    const { error } = await supabase.auth.resetPasswordForEmail(ACCESS_EMAIL, {
+      redirectTo: window.location.origin,
+    });
+    if (error) setError("Invio non riuscito. Riprova.");
+    else setInfo("Ti abbiamo inviato un'email per impostare la password.");
   }
 
   return (
     <main className="min-h-screen bg-background text-foreground flex items-center justify-center px-6">
       <div className="w-full max-w-sm text-center">
         <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-          Gestione presenze
+          Accesso riservato
         </p>
         <h1 className="font-display text-4xl font-semibold uppercase tracking-wide mt-3">
           Calendario
         </h1>
-        <p className="text-sm text-muted-foreground mt-3">
-          Accedi per gestire ferie, permessi e smart working.
-        </p>
 
-        <button
-          onClick={signIn}
-          disabled={busy}
-          className="mt-8 w-full flex items-center justify-center gap-3 rounded-2xl border border-border bg-card px-4 py-4 text-sm font-medium uppercase tracking-wide hover:bg-secondary transition disabled:opacity-60"
-        >
-          <GoogleIcon />
-          {busy ? "Attendi…" : "Accedi con Google"}
-        </button>
+        <form onSubmit={submit} className="mt-8 space-y-3 text-left">
+          <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            {recovery ? "Nuova password" : "Password"}
+          </label>
+          <div className="flex gap-2">
+            <input
+              type={show ? "text" : "password"}
+              autoFocus
+              autoComplete={recovery ? "new-password" : "current-password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm tracking-widest outline-none focus:ring-2 focus:ring-ring"
+            />
+            <button
+              type="button"
+              onClick={() => setShow((v) => !v)}
+              className="shrink-0 rounded-xl border border-border bg-card px-3 text-[10px] uppercase tracking-widest hover:bg-secondary"
+            >
+              {show ? "Nascondi" : "Mostra"}
+            </button>
+          </div>
+          <button
+            type="submit"
+            disabled={busy}
+            className="w-full rounded-xl bg-primary text-primary-foreground px-4 py-3 text-sm font-medium uppercase tracking-wide disabled:opacity-60"
+          >
+            {busy ? "Attendi…" : recovery ? "Imposta password" : "Accedi"}
+          </button>
+        </form>
 
+        {!recovery && (
+          <button
+            onClick={sendReset}
+            className="mt-4 text-[10px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
+          >
+            Imposta / recupera password
+          </button>
+        )}
         {error && <p className="mt-4 text-xs text-destructive">{error}</p>}
+        {info && <p className="mt-4 text-xs text-muted-foreground">{info}</p>}
       </div>
     </main>
   );
