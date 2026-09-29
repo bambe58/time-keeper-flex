@@ -109,6 +109,10 @@ function Index() {
     signOut,
     refreshProfile,
   } = useAuth();
+  const [recoveryMode, setRecoveryMode] = useState<boolean | null>(null);
+  useEffect(() => {
+    setRecoveryMode(window.location.hash.includes("type=recovery"));
+  }, []);
 
 
 
