@@ -218,12 +218,12 @@ function Index() {
         ? "bg-red-500"
         : "bg-amber-400";
 
-  if (!hydrated || authLoading) {
+  if (!hydrated || authLoading || recoveryMode === null) {
     return <main className="min-h-screen bg-background" />;
   }
 
-  if (!user) {
-    return <LoginScreen />;
+  if (!user || recoveryMode) {
+    return <LoginScreen onDone={() => setRecoveryMode(false)} />;
   }
 
   return (
